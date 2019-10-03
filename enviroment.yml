@@ -1,0 +1,12 @@
+name: Megatron-LM
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - pip
+  - nltk>=3.4
+  - numpy>=1.15.4
+  - pandas>=0.24.0
+  - tensorflow>=1.12.0,<2.0
+  - pip:
+    - sentencepiece>=0.1.8
