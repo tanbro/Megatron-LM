@@ -5,6 +5,7 @@ inflect
 nltk
 numpy
 pandas
+regex
 requests
 sentencepiece
 tqdm
