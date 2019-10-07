@@ -231,7 +231,15 @@ def prepare_tokenizer(args):
     args.tokenizer_num_type_tokens = tokenizer.num_type_tokens
     args.eod_token = tokenizer.get_command('eos').Id
 
-    after = tokenizer.num_tokens
+    before = tokenizer.num_tokens
+    after = before
+
+    # Add: liuxy 128 对其的问题！是从 `pretrain_gpt2.py` COPY 过来的
+    multiple = args.make_vocab_size_divisible_by * mpu.get_model_parallel_world_size()
+    while (after % multiple) != 0:
+        after += 1
+    print_rank_0('> padded vocab (size: {}) with {} dummy '
+                    'tokens (new size: {})'.format(before, after - before, after))
     while after % mpu.get_model_parallel_world_size() != 0:
         after += 1
 
