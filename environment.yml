@@ -16,7 +16,7 @@ dependencies:
   - requests
   - tqdm
   - tensorflow-gpu<2.0,>=1.13
-  - pytorch>=1.2
+  - pytorch>=1.1
   - torchvision
   - cudatoolkit=10.0
   - pip:
