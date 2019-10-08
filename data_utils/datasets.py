@@ -459,9 +459,9 @@ class GPT2Dataset(data.Dataset):
                  max_seq_len=1024,
                  num_samples=None,
                  weighted=True,
-                 sample_across_doc=True,
+                 sample_across_doc=False,
                  random_across_doc_sampling=True,
-                 sentence_start=False, **kwargs):
+                 sentence_start=True, **kwargs):
         self.ds = ds
         self.ds_len = len(self.ds)
         self.num_samples = num_samples
@@ -561,6 +561,13 @@ class GPT2Dataset(data.Dataset):
         if '?' in tok:
             return True
         if '!' in tok:
+            return True
+        # 加上汉字全角符号
+        if '。' in tok:
+            return True
+        if '？' in tok:
+            return True
+        if '！' in tok:
             return True
         return False
 
