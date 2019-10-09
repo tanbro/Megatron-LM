@@ -27,7 +27,7 @@
    使用 [Apt][] 安装以下系统软件：
 
    ```bash
-   sudo apt install build-essential libopenexr-dev python3 python3-dev python3-pip python3-venv
+   sudo apt install wget build-essential libopenexr-dev python3 python3-dev python3-pip python3-venv
    ```
 
 1. 安装 [CUDA][] `10.0`
