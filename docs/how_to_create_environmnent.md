@@ -2,7 +2,7 @@
 
 ## 前提要求
 
-- 硬件：支持[NVIDIA][][CUDA][] `10.0` 的图形卡设备
+- 硬件：支持 [CUDA][]`10.0` 的 [NVIDIA][] 设备
 - 操作系统：[Ubuntu][] `1804 LTS x86_64`
 
 ## 环境隔离
@@ -114,7 +114,7 @@
         env/bin/pip install --upgrade -r requirements-base.txt
         ```
 
-   1. 从 [Github](https://github.com/nvidia/apex) 下载[NVIDIA][][Apex][] `master` 分支，然后从源代码构建并安装:
+   1. 从 [Github](https://github.com/nvidia/apex) 下载 [NVIDIA][] [Apex][] `master` 分支，然后从源代码构建并安装:
 
       - 如果采用系统全局环境：
 
