@@ -40,7 +40,7 @@
 
 1. 新建虚拟环境
 
-   使用 [venv][] 新建虚拟环境，并更新环境中的 [pip][], [setuptools][]
+   使用 [venv][] 在名为`env`(也可以使用其它名称)的子目录新建虚拟环境，并更新环境中的 [pip][], [setuptools][]
 
    > 💡 **提示**:
    >
@@ -58,26 +58,27 @@
    env/bin/pip install --upgrade setuptools
    ```
 
-1. 安装 [pip][] 软件
+1. 安装 [PyPI][] 软件
 
-   [Apex][] 只能在安装 [PyTorch][] 之后方可安装，所以分开两个步骤
+   [Apex][] 在安装 [PyTorch][] 之后才可以安装，所以分开两个步骤：
 
-   1. 安装除 [Apex][] 之外的软件
+   1. 安装除 NVIDIA [Apex][] 之外的 [PyPI][] 软件
 
       ```bash
       env/bin/pip install -r requirements-base.txt
       ```
 
-   1. 安装 NVIDIA [Apex][]
+   1. 从 Github 下载代码 安装 NVIDIA [Apex][]
 
       ```bash
-      env/bin/pip install -r requirements-apex.txt
+      env/bin/pip install -v -r requirements-apex.txt
       ```
 
 现在，这个项目可以用该环境下的 `python` 执行了！
 
 ------
 
+[PyPI]: https://pypi.org/ "Find, install and publish Python packages with the Python Package Index"
 [pip]: https://packaging.python.org/key_projects/#pip "A tool for installing Python packages."
 [venv]: https://packaging.python.org/key_projects/#venv "A package in the Python Standard Library (starting with Python 3.3) for creating Virtual Environments."
 [setuptools]: https://packaging.python.org/key_projects/#easy-install "setuptools (which includes easy_install) is a collection of enhancements to the Python distutils that allow you to more easily build and distribute Python distributions, especially ones that have dependencies on other packages."
