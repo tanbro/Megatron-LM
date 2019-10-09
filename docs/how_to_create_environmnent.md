@@ -2,12 +2,19 @@
 
 ## 前提要求
 
-- 硬件：支持 [CUDA][]`10.0` 的 [NVIDIA][] 设备
-- 操作系统：[Ubuntu][] `1804 LTS x86_64`
+- 硬件：
+
+  - `CPU`: `x86_64` 架构
+  - `GPU`: 兼容 [CUDA][]`10.0`
+
+- 操作系统：[Ubuntu][] `1804 x86_64`
+
+  任何兼容 [CUDA][]`10.0` 的 `Linux x86_64` 操作系统都可运行该项目，但本文仅以 [Ubuntu][]`1804 x86_64` 为例。
+  详情请参考 <https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html#system-requirements>
 
 ## 环境隔离
 
-强烈建议为该项目准备隔离的运行环境，它可以是：
+强烈建议为该项目准备一个隔离的运行环境，它可以是：
 
 - [venv][] 虚拟环境
 - [Conda][] 环境
@@ -32,8 +39,6 @@
 
    此处仅记录通过 [Apt][] 在线安装的方法，其它各种安装方式可参考 <https://developer.nvidia.com/cuda-downloads>
 
-   **安装完毕后需要重启计算机**
-
    ```bash
    wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/cuda-ubuntu1804.pin
    sudo mv cuda-ubuntu1804.pin /etc/apt/preferences.d/cuda-repository-pin-600
@@ -43,9 +48,11 @@
    sudo apt-get -y install cuda-10-0
    ```
 
+   **该步骤安装完毕后需重启计算机**
+
 1. 安装 `cuDNN for CUDA 10.0`
 
-   使用浏览器访问 <https://developer.nvidia.com/cudnn> 需要事先注册[NVIDIA][]账号），依次点击超链接：
+   使用浏览器访问 <https://developer.nvidia.com/cudnn> （需要事先注册[NVIDIA][]账号），依次点击超链接：
 
    1. `cuDNN for CUDA 10.0` 最新稳定版
    1. `Library for Windows, Mac, Linux, Ubuntu and RedHat/Centos(x86_64architectures )`
@@ -69,7 +76,7 @@
 
    > 💡 **提示**:
    >
-   > 如果同时安装了 [Conda][] 或者其它形式的多个 [Python][] 并存的运行环境，在新建 [venv][] 时，注意不要搞错。
+   > 如有 [Conda][] 或者其它多个 [Python][] 并存的情况，在新建 [venv][] 时，注意不要搞错。
    > 可以使用 `which` 命令检查，如：
    >
    > ```bash
@@ -88,7 +95,7 @@
 
    > 💡 **提示**:
    >
-   > 如果同时安装了 [Conda][] 或者其它形式的多个 [Python][] 并存的运行环境，在使用 [pip][] 安装软件包时，注意不要搞错。
+   > 如有 [Conda][] 或者其它多个 [Python][] 并存的情况，在使用 [pip][] 安装软件包时，注意不要搞错。
    > 可以这样检查：
    >
    > ```bash
@@ -98,13 +105,13 @@
 
    [Apex][] 在 [PyTorch][] 安装完毕之后才可以安装，所以分开两个步骤：
 
-   1. 从 [PyPI][] 安装除[NVIDIA][][Apex][] 之外的软件:
+   1. 从 [PyPI][] 安装除 [Apex][] 之外的软件:
 
       - 如果采用系统全局环境：
 
         ```bash
         cd /path/of/this/project
-        sudo pip3 install --upgrade -r requirements-base.txt
+        sudo -H pip3 install --upgrade -r requirements-base.txt
         ```
 
       - 如果采用 [venv][] 虚拟环境：
@@ -114,27 +121,48 @@
         env/bin/pip install --upgrade -r requirements-base.txt
         ```
 
-   1. 从 [Github](https://github.com/nvidia/apex) 下载 [NVIDIA][] [Apex][] `master` 分支，然后从源代码构建并安装:
+   1. 从 [Github](https://github.com/nvidia/apex) 下载 [Apex][] 的 `master` 分支，然后从源代码构建并安装:
 
       - 如果采用系统全局环境：
 
         ```bash
         cd /path/of/this/project
-        sudo pip3 install -v -r requirements-apex.txt
+        sudo -H pip3 install -v --upgrade -r requirements-apex.txt
         ```
 
       - 如果采用 [venv][] 虚拟环境：
 
         ```bash
         cd /path/of/this/project
-        env/bin/pip install -v -r requirements-apex.txt
+        env/bin/pip install -v --upgrade -r requirements-apex.txt
         ```
+
+至此，环境已配置完毕：
+
+- 如果在系统全局配置了上述环境，可使用系统级的 `python3` 调用项目脚本，如：
+
+  ```bash
+  python3 pretrain_gpt2.py
+  ```
+
+- 如果在虚拟目录配置了上述环境，可使用该虚拟目录中的 `python` 调用项目脚本，如：
+
+  ```bash
+  env/bin/python pretrain_gpt2.py
+  ```
+
+> ‼ **注意**:
+>
+> 小心多个 [Python][] 运行时并存的情况，不要搞错路径。
 
 ## Conda 环境
 
 我们可以将 [CUDA][] 等软件安装在 [Conda][] 环境中，而不必安装到操作系统(仍需要在系统中安装`Driver`)。
 
 1. 按照 [Conda][] 官方文档的指导，安装并配置 `Anaconda` 或者 `Miniconda`。
+
+   - 如安装 `Anaconda`，请参考 <https://www.anaconda.com/distribution/>
+   - 如安装 `Miniconda`，请参考 <https://conda.io/en/latest/miniconda.html>
 
 1. 安装 [NVIDIA][] `Driver`。
 
@@ -146,45 +174,55 @@
    sudo apt install nvidia-driver-418
    ```
 
-   **安装完毕后需要重启计算机**
+   **该步骤安装完毕后需重启计算机**
 
-1. 新建并激活 [Conda][] 环境。
+1. 创建 [Conda][] 环境。
 
-   该项目提供了 [Conda][] 配置文件 `environment.yml`，我们可以直接由这个配置文件恢复名为 `Megatron-LM` 的[Conda][] 环境：
+   该项目提供了 [Conda][] 配置文件 `environment.yml`，我们可以直接由这个配置文件创建名为 `Megatron-LM` 的 [Conda][] 环境，并同时在该环境中安装所需软件包（除了 [Apex][]）：
 
    ```bash
    cd /path/of/this/project
    conda env update -f environment.yml
    ```
 
-1. 安装 [NVIDIA][] [Apex][]
+1. 安装 [Apex][]
 
-   [Apex][] 在 [PyTorch][] 安装后方可安装，并且没有官方的 [Conda][] 源，所以我们需要在环境恢复后，使用 [pip][] 手动安装：
+   [Apex][] 在 [PyTorch][] 安装后方可安装，且没有官方 [Conda][] 源，所以我们只能在环境创建后，手动调用 [pip][] 从源代码进行构建和安装：
 
    ```bash
    cd /path/of/this/project
-   env/bin/pip install -v -r requirements-apex.txt
+   conda activate Megatron-LM
+   pip install -v -r requirements-apex.txt
    ```
 
-## Docker 容器环境
+现在，我们已经在名为 `Megatron-LM` 的 [Conda][] 环境中配置了该项目所需的 [Python][] 运行时。激活环境即可使用，如：
+
+```bash
+cd /path/of/this/project
+conda activate Megatron-LM
+python pretrain_gpt2.py
+```
+
+## Docker 容器
 
 我们可以将 [CUDA][] 等软件，以及这个项目本身，全部安装在 [Docker][] 镜像中，而不必安装到操作系统(仍需要在系统中安装`Driver`与 [NVIDIA Container Toolkit][])。
 
-项目根目录有 [Docker][] 配置文件`Dockerfile`。另外，这个项目的派生来源([NVIDIA/Megatron-LM](https://github.com/NVIDIA/Megatron-LM))也在`docker`目录下提供了 [Docker][] 配置文件。
-此处以我们自己的为准。
+项目根目录存放有 [Docker][] 配置文件`Dockerfile`。另外，这个项目的派生来源([NVIDIA/Megatron-LM](https://github.com/NVIDIA/Megatron-LM))也在`docker`目录下提供了 [Docker][] 配置文件。此处以我们自己的为准。
 
 1. 安装 [Docker][] `19.03` 或以上版本。
 
-   由于 [NVIDIA Container Toolkit][] 的版本要求，我们无法直接使用 [Ubuntu][] `1804` 官方提供的较低版本 [Docker][]，而是需要安装其最新稳定版。
-   此处以 [Docker][] CE 为例(参考: <https://docs.docker.com/install/linux/docker-ce/ubuntu/>)：
+   由于 [NVIDIA Container Toolkit][] 对 [Docker][] 的版本要求，我们无法直接使用 [Ubuntu][] `1804` 官方提供的较低版本 [Docker][]，而是要安装较新的稳定版。
+
+   建议参考 <https://docs.docker.com/install/linux/docker-ce/ubuntu/> 安装满足版本要求的 [Docker][]`CE`。此处亦作简单记录：
 
    ```bash
-   sudo apt-get remove docker docker-engine docker.io
+   sudo apt-get remove docker docker-engine docker.io containerd runc
    sudo apt-get update
    sudo apt-get install \
        apt-transport-https \
        ca-certificates \
        curl \
+       gnupg-agent \
        software-properties-common
    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
    sudo add-apt-repository \
@@ -192,7 +230,7 @@
       $(lsb_release -cs) \
       stable"
    sudo apt-get update
-   sudo apt-get install docker-ce
+   sudo apt-get install docker-ce docker-ce-cli containerd.io
    ```
 
 2. 安装 [NVIDIA][] `Driver`。
@@ -205,7 +243,7 @@
    sudo apt install nvidia-driver-418
    ```
 
-   **安装完毕后需要重启计算机**
+   **该步骤安装完毕后需重启计算机**
 
 3. 安装 [NVIDIA Container Toolkit][]，它为容器提供`GPU`加速功能。
 
@@ -221,10 +259,16 @@
 
    ```bash
    cd /path/of/this/project
-   sudo docker build --no-cache .
+   sudo docker build .
    ```
 
    本项目的脚本复制到了镜像的 `/root` 目录。
+
+构建完毕后，我们可以通过 [Docker][] 容器运行这个镜像中的项目脚本，如（假设该镜像的 `ID` 是 `123456789abc`）：
+
+```bash
+sudo docker run 123456789abc python3 pretrain_gpt2.py
+```
 
 ------
 
