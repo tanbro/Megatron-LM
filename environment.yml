@@ -5,7 +5,7 @@ channels:
   - pytorch
   - nvidia
 dependencies:
-  - python
+  - python>=3.6
   - pip
   - boto3
   - google-cloud-language

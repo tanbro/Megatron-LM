@@ -163,7 +163,7 @@ def get_masks_and_position_ids(data,
                                eod_token,
                                reset_position_ids,
                                reset_attention_mask,
-                               eod_mask_loss):
+                               eod_mask_loss=False):
 
     # Extract batch size and sequence length.
     batch_size, seq_length = data.size()
