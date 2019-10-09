@@ -3,6 +3,7 @@ channels:
   - defaults
   - conda-forge
   - pytorch
+  - nvidia
 dependencies:
   - python=3.6
   - pip
@@ -19,5 +20,6 @@ dependencies:
   - pytorch>=1.1
   - torchvision
   - cudatoolkit=10.0
+  - nvcc_linux-64=10.0
   - pip:
     - sentencepiece
