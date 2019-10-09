@@ -21,5 +21,6 @@ dependencies:
   - torchvision
   - cudatoolkit=10.0
   - nvcc_linux-64=10.0
+  - openexr
   - pip:
     - sentencepiece
