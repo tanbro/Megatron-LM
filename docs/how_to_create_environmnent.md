@@ -161,8 +161,8 @@
 
 1. 按照 [Conda][] 官方文档的指导，安装并配置 `Anaconda` 或者 `Miniconda`。
 
-   - 如安装 `Anaconda`，请参考 <https://www.anaconda.com/distribution/>
-   - 如安装 `Miniconda`，请参考 <https://conda.io/en/latest/miniconda.html>
+   - 如安装 `Anaconda`，请参考 <https://docs.anaconda.com/anaconda/install/linux/>
+   - 如安装 `Miniconda`，请参考 <https://conda.io/projects/conda/user-guide/install/linux.html>
 
 1. 安装 [NVIDIA][] `Driver`。
 
