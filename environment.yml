@@ -1,0 +1,27 @@
+name: Megatron-LM
+channels:
+  - defaults
+  - conda-forge
+  - pytorch
+  - nvidia
+dependencies:
+  - python>=3.6
+  - pip
+  - boto3
+  - google-cloud-language
+  - inflect
+  - nltk
+  - numpy
+  - pandas
+  - regex
+  - requests
+  - tqdm
+  - tensorflow-gpu<2.0,>=1.14
+  - pytorch>=1.1
+  - torchvision
+  - cudatoolkit=10.0
+  - nvcc_linux-64=10.0
+  - openexr
+  - future
+  - pip:
+    - sentencepiece

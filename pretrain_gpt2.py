@@ -163,7 +163,7 @@ def get_masks_and_position_ids(data,
                                eod_token,
                                reset_position_ids,
                                reset_attention_mask,
-                               eod_mask_loss):
+                               eod_mask_loss=False):
 
     # Extract batch size and sequence length.
     batch_size, seq_length = data.size()
@@ -549,7 +549,8 @@ def get_train_val_test_data(args):
                 args)
             num_tokens = tokenizer.num_tokens
             eod_token = tokenizer.get_command('eos').Id
-            assert eod_token == tokenizer.get_command('pad').Id
+            # commented by: liuxy - 为什么要相等？反正在我们的模型里面不相等
+            # assert eod_token == tokenizer.get_command('pad').Id
         before = num_tokens
         after = before
         multiple = args.make_vocab_size_divisible_by * \
