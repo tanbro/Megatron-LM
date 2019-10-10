@@ -8,11 +8,12 @@ python3 -m torch.distributed.launch \
         --num-attention-heads 12 \
         --seq-length 1024 \
         --max-position-embeddings 1024 \
-        --batch-size 12 \
-        --train-iters 320000 \
+        --batch-size 16 \
+        --train-iters 1000000 \
         --save-interval 1000 \
-        --save checkpoints/gpt2_117m_百科 \
-        --load checkpoints/gpt2_117m_百科 \
+        --save checkpoints/gpt2_117m_hm8g \
+        --load checkpoints/gpt2_117m_hm8g \
+        --tensorboard-dir logs/gpt2_117m_hm8g \
         --resume-dataloader \
         --train-data wikipedia \
         --lazy-loader \

@@ -10,7 +10,8 @@ requests
 sentencepiece
 tqdm
 
-tensorflow-gpu<2.0,>=1.13
+tensorflow-gpu<2.0,>=1.14
 
 torch>=1.1
 torchvision
+future

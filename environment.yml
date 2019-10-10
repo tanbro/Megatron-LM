@@ -16,11 +16,12 @@ dependencies:
   - regex
   - requests
   - tqdm
-  - tensorflow-gpu<2.0,>=1.13
+  - tensorflow-gpu<2.0,>=1.14
   - pytorch>=1.1
   - torchvision
   - cudatoolkit=10.0
   - nvcc_linux-64=10.0
   - openexr
+  - future
   - pip:
     - sentencepiece

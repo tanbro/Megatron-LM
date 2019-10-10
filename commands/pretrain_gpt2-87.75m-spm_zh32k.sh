@@ -13,6 +13,7 @@ python3 -m torch.distributed.launch \
         --save-interval 1000 \
         --save checkpoints/gpt2_87.75m_hm8g \
         --load checkpoints/gpt2_87.75m_hm8g \
+        --tensorboard-dir logs/gpt2_87.75m_hm8g \
         --resume-dataloader \
         --train-data wikipedia \
         --lazy-loader \
