@@ -245,7 +245,10 @@ python pretrain_gpt2.py
 
    **该步骤安装完毕后需重启计算机**
 
-3. 安装 [NVIDIA Container Toolkit][]，它为容器提供`GPU`加速功能。
+3. 安装 [NVIDIA Container Toolkit][]
+
+   它为 [Docker][] 容器提供`GPU`加速功能，它的安装和使用方法详见其网站。
+   本例中，我们这样安装：
 
    ```bash
    distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
@@ -259,7 +262,7 @@ python pretrain_gpt2.py
 
    ```bash
    cd /path/of/this/project
-   sudo docker build .
+   sudo docker build --no-cache .
    ```
 
    本项目的脚本复制到了镜像的 `/root` 目录。
@@ -267,7 +270,7 @@ python pretrain_gpt2.py
 构建完毕后，我们可以通过 [Docker][] 容器运行这个镜像中的项目脚本，如（假设该镜像的 `ID` 是 `123456789abc`）：
 
 ```bash
-sudo docker run 123456789abc python3 pretrain_gpt2.py
+sudo docker run --gpus=all --rm 123456789abc python3 pretrain_gpt2.py
 ```
 
 ------
