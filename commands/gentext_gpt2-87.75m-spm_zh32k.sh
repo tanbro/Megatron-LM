@@ -1,3 +1,5 @@
+#!/bin/bash
+
 python3 generate_samples.py \
     --model-parallel-size 1 \
     --num-layers 12 \
@@ -11,4 +13,4 @@ python3 generate_samples.py \
     --fp16 \
     --cache-dir cache \
     --out-seq-length 768 \
-    --top_p 0.9 \
+    --top_p 0.9

@@ -1,3 +1,5 @@
+#!/bin/bash
+
 python3 generate_samples.py \
     --model-parallel-size 1 \
     --num-layers 24 \
@@ -10,4 +12,4 @@ python3 generate_samples.py \
     --tokenizer-path data/spm/gpt2_huamei_corpus_bpe_32k_v2.model \
     --fp16 \
     --cache-dir cache \
-    --top_p 1 \
+    --top_p 1

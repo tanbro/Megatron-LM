@@ -1,3 +1,5 @@
+#!/bin/bash
+
 python3 -m torch.distributed.launch \
     --nnodes 1 \
     --nproc_per_node 2 \
@@ -28,4 +30,4 @@ python3 -m torch.distributed.launch \
         --clip-grad 1.0 \
         --warmup .01 \
         --checkpoint-activations \
-        --fp16 \
+        --fp16
