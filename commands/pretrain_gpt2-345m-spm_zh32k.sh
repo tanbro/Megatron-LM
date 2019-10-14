@@ -10,7 +10,7 @@ python3 -m torch.distributed.launch \
         --num-attention-heads 16 \
         --max-position-embeddings 1024 \
         --seq-length 1024 \
-        --batch-size 8 \
+        --batch-size 6 \
         --train-iters 1000000 \
         --save-interval 1000 \
         --save checkpoints/gpt2_345m_hm10g \

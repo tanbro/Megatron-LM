@@ -1,4 +1,4 @@
-name: Megatron_LM
+name: Megatron_LM-ipy
 channels:
   - defaults
   - conda-forge
@@ -7,6 +7,9 @@ channels:
 dependencies:
   - python>=3.6
   - pip
+  - ipython
+  - ipywidgets
+  - nb_conda
   - boto3
   - google-cloud-language
   - inflect
