@@ -270,7 +270,7 @@ python pretrain_gpt2.py
 构建完毕后，我们可以通过 [Docker][] 容器运行这个镜像中的项目脚本，如（假设该镜像的 `ID` 是 `123456789abc`）：
 
 ```bash
-sudo docker run --gpus=all --rm 123456789abc python3 pretrain_gpt2.py
+sudo docker run --gpus=all -it --rm -e LANG=C.UTF-8 -v /path/of/data:/root/data -v /path/of/checkpoints:/root/checkpoints 123456789abc python3 generate_samples.py --load checkpoints/model/dir --tokenizer-type SentencePieceTokenizer --tokenizer-path data/path/of/spm.model
 ```
 
 ------

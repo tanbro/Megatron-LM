@@ -13,9 +13,9 @@ python3 -m torch.distributed.launch \
         --batch-size 16 \
         --train-iters 1000000 \
         --save-interval 1000 \
-        --save checkpoints/gpt2_117m_hm8g \
-        --load checkpoints/gpt2_117m_hm8g \
-        --tensorboard-dir logs/gpt2_117m_hm8g \
+        --save checkpoints/gpt2_117m_$DSNAME \
+        --load checkpoints/gpt2_117m_$DSNAME \
+        --tensorboard-dir logs/gpt2_117m_$DSNAME \
         --resume-dataloader \
         --train-data wikipedia \
         --lazy-loader \
