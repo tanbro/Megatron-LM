@@ -187,8 +187,9 @@ def generate_samples_input_from_file(model, tokenizer, args):
             # stdin
             def read_fn():
                 while True:
-                    text = input('input text:').strip()
-                    if not text:
+                    try:
+                        text = input('input:  ').strip()
+                    except KeyboardInterrupt:
                         break
                     yield text
 
@@ -231,9 +232,9 @@ def generate_samples_input_from_file(model, tokenizer, args):
                             in_text, out_text = yield
                             if any(m is None for m in (in_text, out_text)):
                                 break
-                            print(in_text, file=fp)
-                            print(out_text, file=fp)
-                            print('', file=fp)
+                            print(f'input:  {in_text}', file=fp)
+                            print(f'output: {out_text}', file=fp)
+                            print(file=fp)
         else:
             # stdout
             def write_fn():
@@ -241,7 +242,8 @@ def generate_samples_input_from_file(model, tokenizer, args):
                     _, out_text = yield
                     if out_text is None:
                         break
-                    print(out_text)
+                    print(f'output: {out_text}')
+                    print()
 
     else:
         raise NotImplementedError()
