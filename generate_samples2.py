@@ -197,7 +197,7 @@ def generate_samples_input_from_file(model, tokenizer, args):
             # 视作 csv/tsv
             delimiter = ',' if ext == '.csv' else '\t'
 
-            def write_fn(in_text, out_text):
+            def write_fn():
                 with open(args.sample_output_file, 'w+') as fp:
                     writer = csv.writer(
                         args.sample_output_file, delimiter=delimiter, quoting=csv.QUOTE_MINIMAL)
