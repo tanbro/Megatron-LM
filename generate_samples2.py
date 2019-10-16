@@ -199,13 +199,10 @@ def generate_samples_input_from_file(model, tokenizer, args):
             ext = ext.lower()
             if ext in ('.json', 'jsonl', 'jsonline', 'jsonlines'):
                 # 视作 loose-json/json-lines
-
                 def write_fn():
                     with open(args.sample_output_file, 'w+') as fp:
                         while True:
                             in_text, out_text = yield
-                            if any(m is None for m in (in_text, out_text)):
-                                break
                             print(json.dumps(
                                 {'input': in_text, 'output': out_text}, ensure_ascii=False), file=fp)
 
@@ -219,29 +216,23 @@ def generate_samples_input_from_file(model, tokenizer, args):
                             fp, delimiter=delimiter, quoting=csv.QUOTE_MINIMAL, fieldnames=['input', 'output'])
                         while True:
                             in_text, out_text = yield
-                            if any(m is None for m in (in_text, out_text)):
-                                break
-                            writer.writerow({'input': in_text, 'output': out_text})
+                            writer.writerow(
+                                {'input': in_text, 'output': out_text})
 
             else:
-                # 平面文本，只要输出结果
-
+                # 平面文本
                 def write_fn():
                     with open(args.sample_output_file, 'w+') as fp:
                         while True:
                             in_text, out_text = yield
-                            if any(m is None for m in (in_text, out_text)):
-                                break
                             print(f'input:  {in_text}', file=fp)
                             print(f'output: {out_text}', file=fp)
                             print(file=fp)
         else:
-            # stdout
+            # stdout，只要输出结果
             def write_fn():
                 while True:
                     _, out_text = yield
-                    if out_text is None:
-                        break
                     print(f'output: {out_text}')
                     print()
 

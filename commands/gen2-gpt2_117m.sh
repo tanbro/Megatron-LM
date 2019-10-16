@@ -9,7 +9,7 @@ python3 generate_samples2.py \
     --out-seq-length 256 \
     --load "$MODEL_DIR" \
     --tokenizer-type SentencePieceTokenizer \
-    --tokenizer-path data/spm/gpt2_huamei_corpus_bpe_32k_v2.model \
+    --tokenizer-path "$SPM_MODEL" \
     --fp16 \
     --sample-input-file "$INPUT_FILE" \
     --sample-output-file "$OUTPUT_FILE" \
