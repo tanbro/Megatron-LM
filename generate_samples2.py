@@ -158,7 +158,7 @@ def generate_samples_input_from_file(model, tokenizer, args):
     if mpu.get_model_parallel_rank() == 0:
         # 输入函数
         if os.path.isfile(args.sample_input_file):
-            input_lines = sum(1 for _ in open(args.sample_input_file))
+            input_lines = sum(1 for _ in tqdm(open(args.sample_input_file), f'Get lines of {args.sample_input_file}'))
         else:
             input_lines = None
         _, ext = os.path.splitext(args.sample_input_file)
@@ -183,6 +183,8 @@ def generate_samples_input_from_file(model, tokenizer, args):
         if ext.lower in ('.json', 'jsonl', 'jsonline', 'jsonlines'):
             # 视作 loose-json/json-lines
 
+            print('JSON Lines !!!!!!!')
+
             def write_fn():
                 with open(args.sample_output_file, 'w+') as fp:
                     while True:
@@ -194,6 +196,7 @@ def generate_samples_input_from_file(model, tokenizer, args):
 
         elif ext.lower in ('.csv', '.tsv'):
             # 视作 csv/tsv
+            print('CSV/TSV !!!!!!!')
             delimiter = ',' if ext.lower == '.csv' else '\t'
 
             def write_fn(in_text, out_text):
@@ -208,6 +211,7 @@ def generate_samples_input_from_file(model, tokenizer, args):
 
         else:
             # 平面文本，只要输出结果
+            print('Plain Text !!!!!!!')
 
             def write_fn():
                 with open(args.sample_output_file, 'w+') as fp:
