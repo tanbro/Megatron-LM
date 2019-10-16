@@ -189,7 +189,7 @@ def generate_samples_input_from_file(model, tokenizer, args):
                 while True:
                     try:
                         text = input('input:  ').strip()
-                    except KeyboardInterrupt:
+                    except (KeyboardInterrupt, EOFError):
                         break
                     yield text
 
