@@ -162,8 +162,10 @@ def generate_samples_input_from_file(model, tokenizer, args):
                     )
                 )
             _, ext = os.path.splitext(args.sample_input_file)
-            if ext.lower in ('.json', 'jsonl', 'jsonline', 'jsonlines'):
+            ext = ext.lower()
+            if ext in ('.json', 'jsonl', 'jsonline', 'jsonlines'):
                 # 视作 loose-json/json-lines
+                print(f'Input from JSON-Lines file {args.sample_input_file}')
 
                 def read_fn():
                     with open(args.sample_input_file) as fp:
@@ -173,6 +175,7 @@ def generate_samples_input_from_file(model, tokenizer, args):
 
             else:
                 # 视作按行分割的平面文本
+                print(f'Input from plain text file {args.sample_input_file}')
 
                 def read_fn():
                     with open(args.sample_input_file) as fp:
