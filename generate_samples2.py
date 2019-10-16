@@ -224,10 +224,12 @@ def generate_samples_input_from_file(model, tokenizer, args):
                 def write_fn():
                     with open(args.sample_output_file, 'w+') as fp:
                         while True:
-                            _, out_text = yield
-                            if out_text is None:
+                            in_text, out_text = yield
+                            if any(m is None for m in (in_text, out_text)):
                                 break
+                            print(in_text, file=fp)
                             print(out_text, file=fp)
+                            print('', file=fp)
         else:
             # stdout
             def write_fn():
