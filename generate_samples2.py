@@ -201,12 +201,12 @@ def generate_samples_input_from_file(model, tokenizer, args):
             def write_fn():
                 with open(args.sample_output_file, 'w+') as fp:
                     writer = csv.writer(
-                        fp, delimiter=delimiter, quoting=csv.QUOTE_MINIMAL)
+                        fp, delimiter=delimiter, quoting=csv.QUOTE_MINIMAL, fieldnames=['input', 'output'])
                     while True:
                         in_text, out_text = yield
                         if any(m is None for m in (in_text, out_text)):
                             break
-                        writer.writerow([in_text, out_text])
+                        writer.writerow({'input': in_text, 'output': out_text})
 
         else:
             # 平面文本，只要输出结果
