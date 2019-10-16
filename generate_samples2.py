@@ -265,13 +265,13 @@ def generate_samples_input_from_file(model, tokenizer, args):
                     "EMPTY TEXT").tokenization
                 context_length = len(context_tokens)
 
-            terminate_runs_tensor = torch.cuda.LongTensor([terminate_runs])
-            torch.distributed.broadcast(
-                terminate_runs_tensor,
-                mpu.get_model_parallel_src_rank(),
-                group=mpu.get_model_parallel_group()
-            )
-            terminate_runs = terminate_runs_tensor[0].item()
+            # terminate_runs_tensor = torch.cuda.LongTensor([terminate_runs])
+            # torch.distributed.broadcast(
+            #     terminate_runs_tensor,
+            #     mpu.get_model_parallel_src_rank(),
+            #     group=mpu.get_model_parallel_group()
+            # )
+            # terminate_runs = terminate_runs_tensor[0].item()
 
             token_stream = get_token_stream(
                 model, [context_tokens], tokenizer, args)
