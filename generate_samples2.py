@@ -150,10 +150,10 @@ def top_k_logits(logits, top_k=0, top_p=0.0, filter_value=-float('Inf')):
 
 def generate_samples_input_from_file(model, tokenizer, args):
 
-    if args.sample_input_file == "":
-        if mpu.get_model_parallel_rank() == 0:
-            print("args.sample_input_file CAN NOT BE empty!\n")
-        return
+    # if args.sample_input_file == "":
+    #     if mpu.get_model_parallel_rank() == 0:
+    #         print("args.sample_input_file CAN NOT BE empty!\n")
+    #     return
 
     if mpu.get_model_parallel_rank() == 0:
         # 输入函数
