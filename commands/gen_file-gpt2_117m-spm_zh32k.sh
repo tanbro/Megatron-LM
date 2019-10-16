@@ -1,6 +1,6 @@
 #!/bin/bash
 
-python3 generate_samples.py \
+python3 generate_samples2.py \
     --model-parallel-size 1 \
     --num-layers 12 \
     --hidden-size 768 \

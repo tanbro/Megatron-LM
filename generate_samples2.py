@@ -207,7 +207,7 @@ def generate_samples_input_from_file(model, tokenizer, args):
         else:
             # 平面文本，只要输出结果
 
-            def write_fn(_, out_text):
+            def write_fn():
                 with open(args.sample_output_file, 'w+') as fp:
                     while True:
                         _, out_text = yield
@@ -262,7 +262,7 @@ def generate_samples_input_from_file(model, tokenizer, args):
             if mpu.get_model_parallel_rank() == 0:
                 trim_decode_tokens = tokenizer.DecodeIds(decode_tokens)[
                     len(raw_text):]
-                writer.send(raw_text, trim_decode_tokens)
+                writer.send((raw_text, trim_decode_tokens))
 
             torch.distributed.barrier(group=mpu.get_model_parallel_group())
 
