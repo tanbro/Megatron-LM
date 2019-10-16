@@ -200,7 +200,7 @@ def generate_samples_input_from_file(model, tokenizer, args):
 
             def write_fn():
                 with open(args.sample_output_file, 'w+') as fp:
-                    writer = csv.writer(
+                    writer = csv.DictWriter(
                         fp, delimiter=delimiter, quoting=csv.QUOTE_MINIMAL, fieldnames=['input', 'output'])
                     while True:
                         in_text, out_text = yield
