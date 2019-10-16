@@ -179,12 +179,10 @@ def generate_samples_input_from_file(model, tokenizer, args):
                     yield from (line.strip() for line in fp)
 
         # 输出函数
-        print(f'sample_output_file: {args.sample_output_file}')
         _, ext = os.path.splitext(args.sample_output_file)
-        if ext.lower in ('.json', 'jsonl', 'jsonline', 'jsonlines'):
+        ext = ext.lower()
+        if ext in ('.json', 'jsonl', 'jsonline', 'jsonlines'):
             # 视作 loose-json/json-lines
-
-            print('JSON Lines !!!!!!!')
 
             def write_fn():
                 with open(args.sample_output_file, 'w+') as fp:
@@ -197,7 +195,6 @@ def generate_samples_input_from_file(model, tokenizer, args):
 
         elif ext.lower in ('.csv', '.tsv'):
             # 视作 csv/tsv
-            print('CSV/TSV !!!!!!!')
             delimiter = ',' if ext.lower == '.csv' else '\t'
 
             def write_fn(in_text, out_text):
@@ -212,7 +209,6 @@ def generate_samples_input_from_file(model, tokenizer, args):
 
         else:
             # 平面文本，只要输出结果
-            print('Plain Text !!!!!!!')
 
             def write_fn():
                 with open(args.sample_output_file, 'w+') as fp:
