@@ -186,8 +186,11 @@ def generate_samples_input_from_file(model, tokenizer, args):
         else:
             # stdin
             def read_fn():
-                text = input('input text:')
-                yield text.strip()
+                while True:
+                    text = input('input text:').strip()
+                    if not text:
+                        break
+                    yield text
 
         # 输出函数
         if args.sample_output_file:
