@@ -158,7 +158,8 @@ def generate_samples_input_from_file(model, tokenizer, args):
     if mpu.get_model_parallel_rank() == 0:
         # 输入函数
         if os.path.isfile(args.sample_input_file):
-            input_lines = sum(1 for _ in tqdm(open(args.sample_input_file), f'Get lines of {args.sample_input_file}'))
+            input_lines = sum(1 for _ in tqdm(
+                open(args.sample_input_file), f'Get lines of {args.sample_input_file}'))
         else:
             input_lines = None
         _, ext = os.path.splitext(args.sample_input_file)
@@ -200,7 +201,7 @@ def generate_samples_input_from_file(model, tokenizer, args):
             def write_fn():
                 with open(args.sample_output_file, 'w+') as fp:
                     writer = csv.writer(
-                        args.sample_output_file, delimiter=delimiter, quoting=csv.QUOTE_MINIMAL)
+                        fp, delimiter=delimiter, quoting=csv.QUOTE_MINIMAL)
                     while True:
                         in_text, out_text = yield
                         if any(m is None for m in (in_text, out_text)):
