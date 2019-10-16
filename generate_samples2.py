@@ -150,11 +150,6 @@ def top_k_logits(logits, top_k=0, top_p=0.0, filter_value=-float('Inf')):
 
 def generate_samples_input_from_file(model, tokenizer, args):
 
-    # if args.sample_input_file == "":
-    #     if mpu.get_model_parallel_rank() == 0:
-    #         print("args.sample_input_file CAN NOT BE empty!\n")
-    #     return
-
     if mpu.get_model_parallel_rank() == 0:
         # 输入函数
         input_lines = None
@@ -246,7 +241,6 @@ def generate_samples_input_from_file(model, tokenizer, args):
             if not raw_text:
                 continue
             torch.distributed.barrier(group=mpu.get_model_parallel_group())
-            terminate_runs = 0
 
             if mpu.get_model_parallel_rank() == 0:
                 context_tokens = tokenizer.EncodeAsIds(
@@ -264,14 +258,6 @@ def generate_samples_input_from_file(model, tokenizer, args):
                 context_tokens = tokenizer.EncodeAsIds(
                     "EMPTY TEXT").tokenization
                 context_length = len(context_tokens)
-
-            # terminate_runs_tensor = torch.cuda.LongTensor([terminate_runs])
-            # torch.distributed.broadcast(
-            #     terminate_runs_tensor,
-            #     mpu.get_model_parallel_src_rank(),
-            #     group=mpu.get_model_parallel_group()
-            # )
-            # terminate_runs = terminate_runs_tensor[0].item()
 
             token_stream = get_token_stream(
                 model, [context_tokens], tokenizer, args)
