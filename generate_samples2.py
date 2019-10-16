@@ -157,67 +157,85 @@ def generate_samples_input_from_file(model, tokenizer, args):
 
     if mpu.get_model_parallel_rank() == 0:
         # 输入函数
-        if os.path.isfile(args.sample_input_file):
-            input_lines = sum(1 for _ in tqdm(
-                open(args.sample_input_file), f'Get lines of {args.sample_input_file}'))
+        input_lines = None
+        if args.sample_input_file:
+            if os.path.isfile(args.sample_input_file):
+                input_lines = sum(
+                    1 for _ in tqdm(
+                        open(args.sample_input_file),
+                        f'Get lines of {args.sample_input_file}'
+                    )
+                )
+            _, ext = os.path.splitext(args.sample_input_file)
+            if ext.lower in ('.json', 'jsonl', 'jsonline', 'jsonlines'):
+                # 视作 loose-json/json-lines
+
+                def read_fn():
+                    with open(args.sample_input_file, encoding='utf8') as fp:
+                        for line in fp:
+                            line = line.strip()
+                            yield json.loads(line)['text'].strip() if line else ''
+
+            else:
+                # 视作按行分割的平面文本
+
+                def read_fn():
+                    with open(args.sample_input_file) as fp:
+                        yield from (line.strip() for line in fp)
         else:
-            input_lines = None
-        _, ext = os.path.splitext(args.sample_input_file)
-        if ext.lower in ('.json', 'jsonl', 'jsonline', 'jsonlines'):
-            # 视作 loose-json/json-lines
-
+            # stdin
             def read_fn():
-                with open(args.sample_input_file, encoding='utf8') as fp:
-                    for line in fp:
-                        line = line.strip()
-                        yield json.loads(line)['text'].strip() if line else ''
-
-        else:
-            # 视作按行分割的平面文本
-
-            def read_fn():
-                with open(args.sample_input_file) as fp:
-                    yield from (line.strip() for line in fp)
+                text = input()
+                yield text.strip()
 
         # 输出函数
-        _, ext = os.path.splitext(args.sample_output_file)
-        ext = ext.lower()
-        if ext in ('.json', 'jsonl', 'jsonline', 'jsonlines'):
-            # 视作 loose-json/json-lines
+        if args.sample_output_file:
+            _, ext = os.path.splitext(args.sample_output_file)
+            ext = ext.lower()
+            if ext in ('.json', 'jsonl', 'jsonline', 'jsonlines'):
+                # 视作 loose-json/json-lines
 
-            def write_fn():
-                with open(args.sample_output_file, 'w+') as fp:
-                    while True:
-                        in_text, out_text = yield
-                        if any(m is None for m in (in_text, out_text)):
-                            break
-                        print(json.dumps(
-                            {'input': in_text, 'output': out_text}, ensure_ascii=False), file=fp)
+                def write_fn():
+                    with open(args.sample_output_file, 'w+') as fp:
+                        while True:
+                            in_text, out_text = yield
+                            if any(m is None for m in (in_text, out_text)):
+                                break
+                            print(json.dumps(
+                                {'input': in_text, 'output': out_text}, ensure_ascii=False), file=fp)
 
-        elif ext in ('.csv', '.tsv'):
-            # 视作 csv/tsv
-            delimiter = ',' if ext == '.csv' else '\t'
+            elif ext in ('.csv', '.tsv'):
+                # 视作 csv/tsv
+                delimiter = ',' if ext == '.csv' else '\t'
 
-            def write_fn():
-                with open(args.sample_output_file, 'w+') as fp:
-                    writer = csv.DictWriter(
-                        fp, delimiter=delimiter, quoting=csv.QUOTE_MINIMAL, fieldnames=['input', 'output'])
-                    while True:
-                        in_text, out_text = yield
-                        if any(m is None for m in (in_text, out_text)):
-                            break
-                        writer.writerow({'input': in_text, 'output': out_text})
+                def write_fn():
+                    with open(args.sample_output_file, 'w+') as fp:
+                        writer = csv.DictWriter(
+                            fp, delimiter=delimiter, quoting=csv.QUOTE_MINIMAL, fieldnames=['input', 'output'])
+                        while True:
+                            in_text, out_text = yield
+                            if any(m is None for m in (in_text, out_text)):
+                                break
+                            writer.writerow({'input': in_text, 'output': out_text})
 
+            else:
+                # 平面文本，只要输出结果
+
+                def write_fn():
+                    with open(args.sample_output_file, 'w+') as fp:
+                        while True:
+                            _, out_text = yield
+                            if out_text is None:
+                                break
+                            print(out_text, file=fp)
         else:
-            # 平面文本，只要输出结果
-
+            # stdout
             def write_fn():
-                with open(args.sample_output_file, 'w+') as fp:
-                    while True:
-                        _, out_text = yield
-                        if out_text is None:
-                            break
-                        print(out_text, file=fp)
+                while True:
+                    _, out_text = yield
+                    if out_text is None:
+                        break
+                    print(out_text)
 
     else:
         raise NotImplementedError()
@@ -451,12 +469,12 @@ def main():
     args.batch_size = 1
 
     #
-    if args.sample_input_file == "":
-        print("Argument: sample-input-file can't be empty\n", file=sys.stderr)
-        sys.exit(1)
-    if args.sample_output_file == "":
-        print("Argument: sample-output-file can't be empty\n", file=sys.stderr)
-        sys.exit(1)
+    # if args.sample_input_file == "":
+    #     print("Argument: sample-input-file can't be empty\n", file=sys.stderr)
+    #     sys.exit(1)
+    # if args.sample_output_file == "":
+    #     print("Argument: sample-output-file can't be empty\n", file=sys.stderr)
+    #     sys.exit(1)
 
     # generate samples
 
