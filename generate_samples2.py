@@ -179,6 +179,7 @@ def generate_samples_input_from_file(model, tokenizer, args):
                     yield from (line.strip() for line in fp)
 
         # 输出函数
+        print(f'sample_output_file: {args.sample_output_file}')
         _, ext = os.path.splitext(args.sample_output_file)
         if ext.lower in ('.json', 'jsonl', 'jsonline', 'jsonlines'):
             # 视作 loose-json/json-lines
