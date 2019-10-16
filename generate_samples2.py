@@ -193,9 +193,9 @@ def generate_samples_input_from_file(model, tokenizer, args):
                         print(json.dumps(
                             {'input': in_text, 'output': out_text}, ensure_ascii=False), file=fp)
 
-        elif ext.lower in ('.csv', '.tsv'):
+        elif ext in ('.csv', '.tsv'):
             # 视作 csv/tsv
-            delimiter = ',' if ext.lower == '.csv' else '\t'
+            delimiter = ',' if ext == '.csv' else '\t'
 
             def write_fn(in_text, out_text):
                 with open(args.sample_output_file, 'w+') as fp:
