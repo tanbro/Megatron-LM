@@ -12,5 +12,5 @@ python3 generate_samples2.py \
     --tokenizer-path data/spm/gpt2_huamei_corpus_bpe_32k_v2.model \
     --fp16 \
     --sample-input-file data/text1.txt \
-    --sample-output-file output.txt \
+    --sample-output-file $OUTPUT_PATH \
     --top_p 1

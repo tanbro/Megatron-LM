@@ -29,16 +29,22 @@ import torch
 import torch.nn.functional as F
 import argparse
 import time
+
+from tqdm import tqdm
+
 from arguments import get_args
 from contextlib import closing
 from utils import Timers
+
 from pretrain_gpt2 import initialize_distributed
 from pretrain_gpt2 import set_random_seed
 from pretrain_gpt2 import get_train_val_test_data
 from pretrain_gpt2 import get_masks_and_position_ids
+
 from utils import load_checkpoint
 from data_utils import make_tokenizer
 from configure_data import configure_data
+
 import mpu
 
 from fp16 import FP16_Module
@@ -221,7 +227,7 @@ def generate_samples_input_from_file(model, tokenizer, args):
     model.eval()
     with torch.no_grad(), closing(write_fn()) as writer:
         next(writer)
-        for raw_text in read_fn():
+        for raw_text in tqdm(read_fn()):
             torch.distributed.barrier(group=mpu.get_model_parallel_group())
             terminate_runs = 0
 
