@@ -171,8 +171,8 @@ def generate_samples_input_from_file(model, tokenizer, args):
                 # 视作 loose-json/json-lines
 
                 def read_fn():
-                    with open(args.sample_input_file, encoding='utf8') as fp:
-                        for line in fp:
+                    with open(args.sample_input_file) as fp:
+                        for line in tqdm(fp, total=input_lines):
                             line = line.strip()
                             yield json.loads(line)['text'].strip() if line else ''
 
@@ -181,11 +181,12 @@ def generate_samples_input_from_file(model, tokenizer, args):
 
                 def read_fn():
                     with open(args.sample_input_file) as fp:
-                        yield from (line.strip() for line in fp)
+                        yield from (line.strip() for line in tqdm(fp, total=input_lines))
+
         else:
             # stdin
             def read_fn():
-                text = input()
+                text = input('input text:')
                 yield text.strip()
 
         # 输出函数
@@ -245,7 +246,7 @@ def generate_samples_input_from_file(model, tokenizer, args):
     model.eval()
     with torch.no_grad(), closing(write_fn()) as writer:
         next(writer)
-        for raw_text in tqdm(read_fn(), total=input_lines):
+        for raw_text in read_fn():
             if not raw_text:
                 continue
             torch.distributed.barrier(group=mpu.get_model_parallel_group())
