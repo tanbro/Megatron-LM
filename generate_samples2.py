@@ -165,13 +165,19 @@ def generate_samples_input_from_file(model, tokenizer, args):
             ext = ext.lower()
             if ext in ('.json', 'jsonl', 'jsonline', 'jsonlines'):
                 # 视作 loose-json/json-lines
+                # JSON 有特殊处理：记录出 text 之外的其它字段，回写到输出！
                 print(f'Input from JSON-Lines file {args.sample_input_file}')
 
                 def read_fn():
                     with open(args.sample_input_file) as fp:
                         for line in tqdm(fp, total=input_lines):
                             line = line.strip()
-                            yield json.loads(line)['text'].strip() if line else ''
+                            if not line:
+                                yield '', None
+                            data = json.loads(line)
+                            text = data['text']
+                            del data['text']
+                            yield text, data
 
             else:
                 # 视作按行分割的平面文本
@@ -179,7 +185,10 @@ def generate_samples_input_from_file(model, tokenizer, args):
 
                 def read_fn():
                     with open(args.sample_input_file) as fp:
-                        yield from (line.strip() for line in tqdm(fp, total=input_lines))
+                        yield from (
+                            (line.strip(), None)
+                            for line in tqdm(fp, total=input_lines)
+                        )
 
         else:
             # stdin
@@ -189,22 +198,24 @@ def generate_samples_input_from_file(model, tokenizer, args):
                         text = input('input:  ').strip()
                     except (KeyboardInterrupt, EOFError):
                         break
-                    yield text
+                    yield text, None
 
         # 输出函数
         if args.sample_output_file:
             _, ext = os.path.splitext(args.sample_output_file)
             ext = ext.lower()
-            if ext in ('.json', 'jsonl', 'jsonline', 'jsonlines'):
+            if ext in ('.json', '.jsonl', '.jsonline', '.jsonlines'):
                 # 视作 loose-json/json-lines
                 print(f'Output to JSON-Lines file {args.sample_output_file}')
 
                 def write_fn():
                     with open(args.sample_output_file, 'w+') as fp:
                         while True:
-                            in_text, out_text = yield
-                            print(json.dumps(
-                                {'input': in_text, 'output': out_text}, ensure_ascii=False), file=fp)
+                            in_text, out_text, data = yield
+                            d = {'input': in_text, 'output': out_text}
+                            if isinstance(data, dict):
+                                d.update(data)
+                            print(json.dumps(d, ensure_ascii=False), file=fp)
 
             elif ext in ('.csv', '.tsv'):
                 # 视作 csv/tsv
@@ -213,12 +224,13 @@ def generate_samples_input_from_file(model, tokenizer, args):
 
                 def write_fn():
                     with open(args.sample_output_file, 'w+') as fp:
-                        writer = csv.DictWriter(
-                            fp, delimiter=delimiter, quoting=csv.QUOTE_MINIMAL, fieldnames=['input', 'output'])
+                        writer = csv.writer(fp, delimiter=delimiter)
                         while True:
-                            in_text, out_text = yield
-                            writer.writerow(
-                                {'input': in_text, 'output': out_text})
+                            in_text, out_text, data = yield
+                            values = [in_text, out_text]
+                            if isinstance(data, dict):
+                                values.extend(data.values())
+                            writer.writerow(values)
 
             else:
                 # 平面文本
@@ -227,15 +239,18 @@ def generate_samples_input_from_file(model, tokenizer, args):
                 def write_fn():
                     with open(args.sample_output_file, 'w+') as fp:
                         while True:
-                            in_text, out_text = yield
+                            in_text, out_text, data = yield
                             print(f'input:  {in_text}', file=fp)
                             print(f'output: {out_text}', file=fp)
+                            if isinstance(data, dict):
+                                for k, v in data.items():
+                                    print(f'{k}: {v}', file=fp)
                             print(file=fp)
         else:
             # stdout，只要输出结果
             def write_fn():
                 while True:
-                    _, out_text = yield
+                    _, out_text, _ = yield
                     print(f'output: {out_text}')
                     print()
 
@@ -245,7 +260,7 @@ def generate_samples_input_from_file(model, tokenizer, args):
     model.eval()
     with torch.no_grad(), closing(write_fn()) as writer:
         next(writer)
-        for raw_text in read_fn():
+        for raw_text, additional in read_fn():
             if not raw_text:
                 continue
             torch.distributed.barrier(group=mpu.get_model_parallel_group())
@@ -279,7 +294,7 @@ def generate_samples_input_from_file(model, tokenizer, args):
             if mpu.get_model_parallel_rank() == 0:
                 trim_decode_tokens = tokenizer.DecodeIds(decode_tokens)[
                     len(raw_text):]
-                writer.send((raw_text, trim_decode_tokens))
+                writer.send((raw_text, trim_decode_tokens, additional))
 
             torch.distributed.barrier(group=mpu.get_model_parallel_group())
 
