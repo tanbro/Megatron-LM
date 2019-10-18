@@ -18,39 +18,34 @@
 从 NVIDIA/Megatron-LM 的 generate_samples.py 复制，加以修改，适应我们的需求
 """
 
-import csv
-import os
-import sys
-import random
-import json
+##
+import argparse
 import copy
+import csv
+import json
+import os
+import random
+import sys
+import time
+from contextlib import closing
+
+##
 import numpy as np
 import torch
 import torch.nn.functional as F
-import argparse
-import time
+from tqdm.auto import tqdm
 
-from tqdm import tqdm
-
-from arguments import get_args
-from contextlib import closing
-from utils import Timers
-
-from pretrain_gpt2 import initialize_distributed
-from pretrain_gpt2 import set_random_seed
-from pretrain_gpt2 import get_train_val_test_data
-from pretrain_gpt2 import get_masks_and_position_ids
-
-from utils import load_checkpoint
-from data_utils import make_tokenizer
-from configure_data import configure_data
-
+##
 import mpu
-
+from arguments import get_args
+from configure_data import configure_data
+from data_utils import make_tokenizer
 from fp16 import FP16_Module
-from model import GPT2Model
 from model import DistributedDataParallel as DDP
-from utils import print_rank_0
+from model import GPT2Model
+from pretrain_gpt2 import (get_masks_and_position_ids, get_train_val_test_data,
+                           initialize_distributed, set_random_seed)
+from utils import Timers, load_checkpoint, print_rank_0
 
 
 def get_model(args):
@@ -381,7 +376,7 @@ def sample_sequence_batch(model, context_tokens, context_lengths, attention_mask
                     tokens2use = tokens[:, context_length -
                                         1].view(batch_size, -1)
                     positions2use = position_ids[:,
-                                                 context_length - 1].view(batch_size, -1)
+                                                 context_length-1].view(batch_size, -1)
                 logits, layer_past = model(
                     tokens2use, positions2use, attention_mask, layer_past=layer_past, get_present=True)
                 logits = logits[:, -1].view(batch_size, -1).contiguous()

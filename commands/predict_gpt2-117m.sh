@@ -1,6 +1,6 @@
 #!/bin/bash
 
-python3 generate_samples2.py \
+python3 predict_gpt2.py \
     --model-parallel-size 1 \
     --num-layers 12 \
     --hidden-size 768 \
