@@ -11,15 +11,14 @@ python3 -m torch.distributed.launch \
         --max-position-embeddings 1024 \
         --seq-length 1024 \
         --batch-size 16 \
-        --save checkpoints/gpt2-117m-$DSNAME \
-        --load checkpoints/gpt2-117m-$DSNAME \
-        --tensorboard-dir logs/gpt2-117m-$DSNAME \
+        --load "$LOAD_DIR" \
+        --save "$SAVE_DIR" \
+        --tensorboard-dir "$LOG_DIR" \
         --resume-dataloader \
         --train-data wikipedia \
         --lazy-loader \
         --tokenizer-type SentencePieceTokenizer \
-        --tokenizer-path data/spm/gpt2_huamei_corpus_bpe_32k_v2.model \
-        --cache-dir cache \
+        --tokenizer-path "$TOKENIZER_PATH" \
         --split 949,50,1 \
         --distributed-backend nccl \
         --lr 0.00015 \
