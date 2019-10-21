@@ -79,3 +79,5 @@ if __name__ == "__main__":
     args = get_args()
     status = main(args)
     sys.exit(status)
+
+from transformers.tokenization_gpt2 import GPT2Tokenizer
