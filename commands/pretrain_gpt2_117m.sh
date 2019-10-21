@@ -15,7 +15,7 @@ python3 -m torch.distributed.launch \
         --save "$SAVE_DIR" \
         --tensorboard-dir "$LOG_DIR" \
         --resume-dataloader \
-        --train-data wikipedia \
+        --train-data "$TRAIN_DATA" \
         --lazy-loader \
         --tokenizer-type SentencePieceTokenizer \
         --tokenizer-path "$TOKENIZER_PATH" \
