@@ -420,7 +420,8 @@ def prepare_tokenizer(args):
         'model_path': args.tokenizer_path,
         'vocab_size': args.vocab_size,
         'model_type': args.tokenizer_model_type,
-        'cache_dir': args.cache_dir}
+        'cache_dir': args.cache_dir
+    }
     tokenizer = make_tokenizer(**tokenizer_args)
 
     args.tokenizer_num_tokens = tokenizer.num_tokens
