@@ -37,9 +37,9 @@ logger = logging.getLogger(__name__)
 
 
 class JsonLinesDataset(Dataset):
-    def __init__(self, path, tokenizer, model_config, args):
+    def __init__(self, path, tokenizer, config, args):
         self._tokenizer = tokenizer
-        self._model_config = model_config
+        self._config = config
         self._args = args
         self._data_list = []
         with open(path, encoding='utf8') as fp:
@@ -55,9 +55,18 @@ class JsonLinesDataset(Dataset):
     def __getitem__(self, idx):
         """ Prepare masked tokens inputs/labels for masked language modeling: 80% MASK, 10% random, 10% original. """
         tokenizer = self._tokenizer
+        config = self._config
+        args = self._args
+        n_ctx = config.n_ctx
         text = self._data_list[idx]['text'].strip()
         ids = [int(id_) for id_ in tokenizer.EncodeAsIds(text)]
-        return torch.tensor(ids)
+        pad_sz = n_ctx - len(ids)
+        ids = torch.tensor(ids)        
+        if pad_sz > 0:
+            ids = F.pad(ids, (0, pad_sz), value=tokenizer.get_command('pad').Id)
+        else:
+            ids = ids[:n_ctx]
+        return ids
 
 
 def set_seed(args):
@@ -116,13 +125,15 @@ def pad_tokens_list(tokens_list, length, value):
     ]
 
 
-def mask_tokens_list(inputs, tokenizer, config, args):
+def mask_batch(inputs, tokenizer, args):
     """ Prepare masked tokens inputs/labels for masked language modeling: 80% MASK, 10% random, 10% original. """
     labels = inputs.clone()
     # We sample a few tokens in each sequence for masked-LM training (with probability args.mlm_probability defaults to 0.15 in Bert/RoBERTa)
     probability_matrix = torch.full(labels.shape, args.mlm_probability)
-    special_tokens_mask = [tokenizer.get_special_tokens_mask(
-        val, already_has_special_tokens=True) for val in labels.tolist()]
+    special_tokens_mask = [
+        [0] * len(val)
+        for val in labels.tolist()
+    ]
     probability_matrix.masked_fill_(torch.tensor(
         special_tokens_mask, dtype=torch.bool), value=0.0)
     masked_indices = torch.bernoulli(probability_matrix).bool()
@@ -131,8 +142,7 @@ def mask_tokens_list(inputs, tokenizer, config, args):
     # 80% of the time, we replace masked input tokens with tokenizer.mask_token ([MASK])
     indices_replaced = torch.bernoulli(torch.full(
         labels.shape, 0.8)).bool() & masked_indices
-    inputs[indices_replaced] = tokenizer.convert_tokens_to_ids(
-        tokenizer.mask_token)
+    inputs[indices_replaced] = tokenizer.get_command('MASK').Id
 
     # 10% of the time, we replace masked input tokens with random word
     indices_random = torch.bernoulli(torch.full(
@@ -142,10 +152,8 @@ def mask_tokens_list(inputs, tokenizer, config, args):
     inputs[indices_random] = random_words[indices_random]
 
     # The rest of the time (10% of the time) we keep the masked input tokens unchanged
+    return inputs, labels
 
-    n_ctx = config.n_ctx
-    pad_val = tokenizer.get_command('pad').Id
-    return pad_tokens_list(inputs, n_ctx, pad_val), pad_tokens_list(labels, n_ctx, pad_val)
 
 
 def train(args, train_dataset, model, tokenizer):
@@ -228,7 +236,7 @@ def train(args, train_dataset, model, tokenizer):
         epoch_iterator = tqdm(train_dataloader, desc="Iteration",
                               disable=args.local_rank not in [-1, 0])
         for step, batch in enumerate(epoch_iterator):
-            inputs, labels = mask_tokens_list(
+            inputs, labels = mask_batch(
                 batch, tokenizer, args) if args.mlm else (batch, batch)
             inputs = inputs.to(args.device)
             labels = labels.to(args.device)
@@ -374,8 +382,13 @@ def get_args():
     parser.add_argument("--model_name_or_path", required=True, type=str,
                         help="The model checkpoint for weights initialization.")
 
-    parser.add_argument("--mlm_probability", type=float, default=0.15,
-                        help="Ratio of tokens to mask for masked language modeling loss")
+    # >>> liuxy
+    # GPT2 不用 MASK!?
+    # parser.add_argument("--mlm", action='store_true',
+    #                     help="Train with masked-language modeling loss instead of language modeling.")
+    # parser.add_argument("--mlm_probability", type=float, default=0.15,
+    #                     help="Ratio of tokens to mask for masked language modeling loss")
+    # <<< liuxy
 
     parser.add_argument("--config_name", default="", type=str,
                         help="Optional pretrained config name or path if not the same as model_name_or_path")
@@ -449,8 +462,8 @@ def get_args():
     args = parser.parse_args()
 
     # >>> add by: liuxy
-    # GPT2 是 Mask model, 不是 language model ，从 args 删除，这里写死！
-    args.mlm = True
+    # GPT2 不是 Mask model ?? 这里写死！
+    args.mlm = False
     # <<< add by: liuxy
 
     if args.eval_data_file is None and args.do_eval:
