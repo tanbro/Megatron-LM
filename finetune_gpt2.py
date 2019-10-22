@@ -22,6 +22,7 @@ import sys
 
 import numpy as np
 import torch
+from torch.nn import functional as F
 from torch.utils.data import (DataLoader, Dataset, RandomSampler,
                               SequentialSampler)
 from torch.utils.data.distributed import DistributedSampler
@@ -54,65 +55,24 @@ class JsonLinesDataset(Dataset):
     def __getitem__(self, idx):
         """ Prepare masked tokens inputs/labels for masked language modeling: 80% MASK, 10% random, 10% original. """
         tokenizer = self._tokenizer
-        model_config = self._model_config
-        raw_text = self._data_list[idx]['text'].strip()
+        text = self._data_list[idx]['text'].strip()
+        ids = torch.tensor(tokenizer.EncodeAsIds(text))
+        return torch.tensor(ids)
 
-        # create inputs/labels tensor
-        inputs = torch.tensor(tokenizer.EncodeAsIds(raw_text))
-        labels = inputs.clone()
+    #     # Padding before return
+    #     n_ctx = model_config.n_ctx
+    #     pad_val = tokenizer.get_command('pad').Id
+    #     inputs = self._pad(inputs, n_ctx, pad_val)
+    #     labels = self._pad(labels, n_ctx, pad_val)
 
-        # We sample a few tokens in each sequence for masked-LM training (with probability args.mlm_probability defaults to 0.15 in Bert/RoBERTa)
-        probability_matrix = torch.full(labels.shape, args.mlm_probability)
-        # special_tokens_mask = [
-        #     tokenizer.get_special_tokens_mask(
-        #         val, already_has_special_tokens=True
-        #     )
-        #     for val in labels.tolist()
-        # ]
-        special_tokens_mask = [
-            [0] * len(val)
-            for val in labels.tolist()
-        ]
-        probability_matrix.masked_fill_(
-            torch.tensor(special_tokens_mask, dtype=torch.bool),
-            value=0.0
-        )
-        masked_indices = torch.bernoulli(probability_matrix).bool()
-        labels[~masked_indices] = -1  # We only compute loss on masked tokens
+    #     # return inputs-lables tuple
+    #     return inputs, labels
 
-        # 80% of the time, we replace masked input tokens with tokenizer.mask_token ([MASK])
-        indices_replaced = torch.bernoulli(torch.full(labels.shape, 0.8)).bool() \
-            & masked_indices
-        # inputs[indices_replaced] = tokenizer.convert_tokens_to_ids(tokenizer.mask_token)
-        inputs[indices_replaced] = [tokenizer.get_command('MASK').Id]
-
-        # 10% of the time, we replace masked input tokens with random word
-        indices_random = torch.bernoulli(torch.full(labels.shape, 0.5)).bool() & \
-            masked_indices & ~indices_replaced
-        # random_words = torch.randint(
-        #     len(tokenizer), labels.shape, dtype=torch.long
-        # )
-        random_words = torch.randint(
-            model_config.vocab_size, labels.shape, dtype=torch.long
-        )
-        inputs[indices_random] = random_words[indices_random]
-
-        # The rest of the time (10% of the time) we keep the masked input tokens unchanged
-
-        # Padding before return
-        n_ctx = model_config.n_ctx
-        pad_val = tokenizer.get_command('pad').Id
-        inputs = self._pad(inputs, n_ctx, pad_val)
-        labels = self._pad(labels, n_ctx, pad_val)
-
-        # return inputs-lables tuple
-        return inputs, labels
-
-    def _pad(self, tokens, length, value):
-        sz = length - len(tokens)
-        if sz > 0:
-            return F.pad(tokens, (0, sz), value=value)
-        return tokens
+    # def _pad(self, tokens, length, value):
+    #     sz = length - len(tokens)
+    #     if sz > 0:
+    #         return F.pad(tokens, (0, sz), value=value)
+    #     return tokens
 
 
 def set_seed(args):
@@ -155,6 +115,52 @@ def _rotate_checkpoints(args, checkpoint_prefix, use_mtime=False):
         logger.info(
             "Deleting older checkpoint [{}] due to args.save_total_limit".format(checkpoint))
         shutil.rmtree(checkpoint)
+
+
+def pad_tokens(tokens, length, value):
+    sz = length - len(tokens)
+    if sz > 0:
+        return F.pad(tokens, (0, sz), value=value)
+    return tokens
+
+
+def pad_tokens_list(tokens_list, length, value):
+    return [
+        pad_tokens(tokens, length, value)
+        for tokens in tokens_list.tolist()
+    ]
+
+
+def mask_tokens_list(inputs, tokenizer, config, args):
+    """ Prepare masked tokens inputs/labels for masked language modeling: 80% MASK, 10% random, 10% original. """
+    labels = inputs.clone()
+    # We sample a few tokens in each sequence for masked-LM training (with probability args.mlm_probability defaults to 0.15 in Bert/RoBERTa)
+    probability_matrix = torch.full(labels.shape, args.mlm_probability)
+    special_tokens_mask = [tokenizer.get_special_tokens_mask(
+        val, already_has_special_tokens=True) for val in labels.tolist()]
+    probability_matrix.masked_fill_(torch.tensor(
+        special_tokens_mask, dtype=torch.bool), value=0.0)
+    masked_indices = torch.bernoulli(probability_matrix).bool()
+    labels[~masked_indices] = -1  # We only compute loss on masked tokens
+
+    # 80% of the time, we replace masked input tokens with tokenizer.mask_token ([MASK])
+    indices_replaced = torch.bernoulli(torch.full(
+        labels.shape, 0.8)).bool() & masked_indices
+    inputs[indices_replaced] = tokenizer.convert_tokens_to_ids(
+        tokenizer.mask_token)
+
+    # 10% of the time, we replace masked input tokens with random word
+    indices_random = torch.bernoulli(torch.full(
+        labels.shape, 0.5)).bool() & masked_indices & ~indices_replaced
+    random_words = torch.randint(
+        len(tokenizer), labels.shape, dtype=torch.long)
+    inputs[indices_random] = random_words[indices_random]
+
+    # The rest of the time (10% of the time) we keep the masked input tokens unchanged
+
+    n_ctx = config.n_ctx
+    pad_val = tokenizer.get_command('pad').Id
+    return pad_tokens_list(inputs, n_ctx, pad_val), pad_tokens_list(labels, n_ctx, pad_val)
 
 
 def train(args, train_dataset, model, tokenizer):
@@ -237,7 +243,7 @@ def train(args, train_dataset, model, tokenizer):
         epoch_iterator = tqdm(train_dataloader, desc="Iteration",
                               disable=args.local_rank not in [-1, 0])
         for step, batch in enumerate(epoch_iterator):
-            inputs, labels = mask_tokens(
+            inputs, labels = mask_tokens_list(
                 batch, tokenizer, args) if args.mlm else (batch, batch)
             inputs = inputs.to(args.device)
             labels = labels.to(args.device)
@@ -383,8 +389,6 @@ def get_args():
     parser.add_argument("--model_name_or_path", required=True, type=str,
                         help="The model checkpoint for weights initialization.")
 
-    parser.add_argument("--mlm", action='store_true',
-                        help="Train with masked-language modeling loss instead of language modeling.")
     parser.add_argument("--mlm_probability", type=float, default=0.15,
                         help="Ratio of tokens to mask for masked language modeling loss")
 
@@ -458,6 +462,11 @@ def get_args():
                         default='', help="For distant debugging.")
 
     args = parser.parse_args()
+
+    # >>> add by: liuxy
+    # GPT2 是 Mask model, 不是 language model ，从 args 删除，这里写死！
+    args.mlm = True
+    # <<< add by: liuxy
 
     if args.eval_data_file is None and args.do_eval:
         raise ValueError("Cannot do evaluation without an evaluation data file. Either supply a file to --eval_data_file "
