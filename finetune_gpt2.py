@@ -56,23 +56,8 @@ class JsonLinesDataset(Dataset):
         """ Prepare masked tokens inputs/labels for masked language modeling: 80% MASK, 10% random, 10% original. """
         tokenizer = self._tokenizer
         text = self._data_list[idx]['text'].strip()
-        ids = torch.tensor(tokenizer.EncodeAsIds(text))
+        ids = [int(id_) for id_ in tokenizer.EncodeAsIds(text)]
         return torch.tensor(ids)
-
-    #     # Padding before return
-    #     n_ctx = model_config.n_ctx
-    #     pad_val = tokenizer.get_command('pad').Id
-    #     inputs = self._pad(inputs, n_ctx, pad_val)
-    #     labels = self._pad(labels, n_ctx, pad_val)
-
-    #     # return inputs-lables tuple
-    #     return inputs, labels
-
-    # def _pad(self, tokens, length, value):
-    #     sz = length - len(tokens)
-    #     if sz > 0:
-    #         return F.pad(tokens, (0, sz), value=value)
-    #     return tokens
 
 
 def set_seed(args):
