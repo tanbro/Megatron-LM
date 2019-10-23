@@ -61,9 +61,10 @@ class JsonLinesDataset(Dataset):
         text = self._data_list[idx]['text'].strip()
         ids = [int(id_) for id_ in tokenizer.EncodeAsIds(text)]
         pad_sz = n_ctx - len(ids)
-        ids = torch.tensor(ids)        
+        ids = torch.tensor(ids)
         if pad_sz > 0:
-            ids = F.pad(ids, (0, pad_sz), value=tokenizer.get_command('pad').Id)
+            ids = F.pad(ids, (0, pad_sz),
+                        value=tokenizer.get_command('pad').Id)
         else:
             ids = ids[:n_ctx]
         return ids
@@ -155,7 +156,6 @@ def mask_batch(inputs, tokenizer, args):
     return inputs, labels
 
 
-
 def train(args, train_dataset, model, tokenizer):
     """ Train the model """
     if args.local_rank in [-1, 0]:
@@ -229,13 +229,13 @@ def train(args, train_dataset, model, tokenizer):
     global_step = 0
     tr_loss, logging_loss = 0.0, 0.0
     model.zero_grad()
-    train_iterator = trange(int(args.num_train_epochs),
-                            desc="Epoch", disable=args.local_rank not in [-1, 0])
+    epochs = range(1, 1+int(args.num_train_epochs))
     set_seed(args)  # Added here for reproducibility (even between python 2 and 3)
-    for _ in train_iterator:
-        epoch_iterator = tqdm(train_dataloader, desc="Iteration",
-                              disable=args.local_rank not in [-1, 0])
-        for step, batch in enumerate(epoch_iterator):
+    for epoch in epochs:
+        logger.info('===== Epoch[{:,d}/{:,d}] =====', epoch, len(epoch))
+        for step, batch in enumerate(train_dataloader):
+            if args.logging_steps > 0 and global_step % args.logging_steps == 0:
+                logger.info('===== Step[{:,d}:{:,d}] =====', global_step, (1+step)*args.logging_steps)
             inputs, labels = mask_batch(
                 batch, tokenizer, args) if args.mlm else (batch, batch)
             inputs = inputs.to(args.device)
@@ -382,13 +382,10 @@ def get_args():
     parser.add_argument("--model_name_or_path", required=True, type=str,
                         help="The model checkpoint for weights initialization.")
 
-    # >>> liuxy
-    # GPT2 不用 MASK!?
-    # parser.add_argument("--mlm", action='store_true',
-    #                     help="Train with masked-language modeling loss instead of language modeling.")
-    # parser.add_argument("--mlm_probability", type=float, default=0.15,
-    #                     help="Ratio of tokens to mask for masked language modeling loss")
-    # <<< liuxy
+    parser.add_argument("--mlm", action='store_true',
+                        help="Train with masked-language modeling loss instead of language modeling.")
+    parser.add_argument("--mlm_probability", type=float, default=0.15,
+                        help="Ratio of tokens to mask for masked language modeling loss")
 
     parser.add_argument("--config_name", default="", type=str,
                         help="Optional pretrained config name or path if not the same as model_name_or_path")
@@ -462,7 +459,7 @@ def get_args():
     args = parser.parse_args()
 
     # >>> add by: liuxy
-    # GPT2 不是 Mask model ?? 这里写死！
+    # GPT2 不是 Mask model 这里写死！
     args.mlm = False
     # <<< add by: liuxy
 
