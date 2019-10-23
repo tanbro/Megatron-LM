@@ -232,10 +232,10 @@ def train(args, train_dataset, model, tokenizer):
     epochs = range(1, 1+int(args.num_train_epochs))
     set_seed(args)  # Added here for reproducibility (even between python 2 and 3)
     for epoch in epochs:
-        logger.info('===== Epoch[{:,d}/{:,d}] =====', epoch, len(epochs))
+        logger.info('===== Epoch[%d/%d] =====', epoch, len(epochs))
         for step, batch in enumerate(train_dataloader):
             if args.logging_steps > 0 and global_step % args.logging_steps == 0:
-                logger.info('===== Step[{:,d}:{:,d}] =====', global_step, (1+step)*args.logging_steps)
+                logger.info('===== Step[%d:%d] =====', global_step, (1+step)*args.logging_steps)
             inputs, labels = mask_batch(
                 batch, tokenizer, args) if args.mlm else (batch, batch)
             inputs = inputs.to(args.device)
