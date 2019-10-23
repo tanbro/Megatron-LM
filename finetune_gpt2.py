@@ -293,10 +293,6 @@ def train(args, train_dataset, model, tokenizer):
                                 'eval_{}'.format(key), value, global_step)
                     tb_writer.add_scalar('lr', lr, global_step)
                     tb_writer.add_scalar('loss', loss_, global_step)
-                    logger.info(
-                        'step [%d : %d). lr=%s, loss=%s',
-                        global_step-args.logging_steps, global_step, lr, loss_
-                    )
 
                 if args.local_rank in [-1, 0] and args.save_steps > 0 and global_step % args.save_steps == 0:
                     checkpoint_prefix = 'checkpoint'
@@ -594,9 +590,7 @@ def main(args):
         torch.save(args, os.path.join(args.output_dir, 'training_args.bin'))
 
         # Load a trained model and vocabulary that you have fine-tuned
-        model = model_class.from_pretrained(args.output_dir)
-        tokenizer = tokenizer_class.from_pretrained(
-            args.output_dir, do_lower_case=args.do_lower_case)
+        model = GPT2LMHeadModel.from_pretrained(args.output_dir)
         model.to(args.device)
 
     # Evaluation
