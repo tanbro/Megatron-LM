@@ -609,7 +609,7 @@ def main(args):
             prefix = checkpoint.split(
                 '/')[-1] if checkpoint.find('checkpoint') != -1 else ""
 
-            model = model_class.from_pretrained(checkpoint)
+            model = GPT2LMHeadModel.from_pretrained(checkpoint)
             model.to(args.device)
             result = evaluate(args, model, tokenizer, prefix=prefix)
             result = dict((k + '_{}'.format(global_step), v)
