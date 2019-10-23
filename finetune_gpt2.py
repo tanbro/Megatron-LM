@@ -631,8 +631,6 @@ def main(args):
             )
             results.update(result)
 
-    return results
-
 
 if __name__ == "__main__":
     args = get_args()
