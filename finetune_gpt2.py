@@ -599,12 +599,22 @@ def main(args):
     if args.do_eval and args.local_rank in [-1, 0]:
         eval_dataset = JsonLinesDataset(
             args.eval_data_file, tokenizer, config, args)
-        checkpoints = [args.output_dir]
-        if args.eval_all_checkpoints:
-            checkpoints = list(os.path.dirname(c) for c in sorted(
-                glob.glob(args.output_dir + '/**/' + WEIGHTS_NAME, recursive=True)))
-            logging.getLogger("transformers.modeling_utils").setLevel(
-                logging.WARN)  # Reduce logging
+        # 列出子 checkpoint-xxx 子目录
+        # checkpoints = [args.output_dir]
+        checkpoints = []
+        checkpoint_subdir_re = re.compile(r'^checkpoint\-\d+$')
+        for dir_name in os.listdir(args.output_dir):
+            path = os.path.join(args.output_dir, dir_name)
+            if os.path.isdir(path):
+                if re.fullmatch(checkpoint_subdir_re, dir_name):
+                    checkpoints.append(dir_name)
+
+        # 先不用这个
+        # if args.eval_all_checkpoints:
+        #     checkpoints = list(os.path.dirname(c) for c in sorted(
+        #         glob.glob(args.output_dir + '/**/' + WEIGHTS_NAME, recursive=True)))
+        #     logging.getLogger("transformers.modeling_utils").setLevel(
+        #         logging.WARN)  # Reduce logging
         logger.info("Evaluate the following checkpoints: %s", checkpoints)
         for checkpoint in checkpoints:
             global_step = checkpoint.split(
@@ -612,10 +622,9 @@ def main(args):
             prefix = checkpoint.split(
                 '/')[-1] if checkpoint.find('checkpoint') != -1 else ""
 
-            model = GPT2LMHeadModel.from_pretrained(checkpoint)
+            model = GPT2LMHeadModel.from_pretrained(os.path.join(args.output_dir, checkpoint))
             model.to(args.device)
-            result = evaluate(args, eval_dataset, model,
-                              tokenizer, prefix=prefix)
+            result = evaluate(args, eval_dataset, model, tokenizer, prefix=prefix)
             result = dict(
                 (k + '_{}'.format(global_step), v)
                 for k, v in result.items()
