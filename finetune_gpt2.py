@@ -324,11 +324,12 @@ def train(args, train_dataset, model, tokenizer):
     return global_step, tr_loss / global_step
 
 
-def evaluate(args, model, tokenizer, prefix=""):
+def evaluate(args, train_dataset, model, tokenizer, prefix=""):
     # Loop to handle MNLI double evaluation (matched, mis-matched)
     eval_output_dir = args.output_dir
 
-    eval_dataset = load_and_cache_examples(args, tokenizer, evaluate=True)
+    # 换我们自己的
+    # eval_dataset = load_and_cache_examples(args, tokenizer, evaluate=True)
 
     if not os.path.exists(eval_output_dir) and args.local_rank in [-1, 0]:
         os.makedirs(eval_output_dir)
@@ -596,6 +597,8 @@ def main(args):
     # Evaluation
     results = {}
     if args.do_eval and args.local_rank in [-1, 0]:
+        eval_dataset = JsonLinesDataset(
+            args.eval_data_file, tokenizer, config, args)
         checkpoints = [args.output_dir]
         if args.eval_all_checkpoints:
             checkpoints = list(os.path.dirname(c) for c in sorted(
@@ -611,9 +614,12 @@ def main(args):
 
             model = GPT2LMHeadModel.from_pretrained(checkpoint)
             model.to(args.device)
-            result = evaluate(args, model, tokenizer, prefix=prefix)
-            result = dict((k + '_{}'.format(global_step), v)
-                          for k, v in result.items())
+            result = evaluate(args, eval_dataset, model,
+                              tokenizer, prefix=prefix)
+            result = dict(
+                (k + '_{}'.format(global_step), v)
+                for k, v in result.items()
+            )
             results.update(result)
 
     return results
