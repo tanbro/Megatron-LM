@@ -10,11 +10,13 @@ python3 -m torch.distributed.launch \
         --num-attention-heads 12 \
         --max-position-embeddings 1024 \
         --seq-length 1024 \
-        --batch-size 16 \
+        --batch-size 12 \
+        --resume-dataloader \
         --load "$LOAD_DIR" \
         --save "$SAVE_DIR" \
         --tensorboard-dir "$LOG_DIR" \
-        --resume-dataloader \
+        --loose-json \
+        --text-key text \
         --train-data "$TRAIN_DATA" \
         --lazy-loader \
         --tokenizer-type SentencePieceTokenizer \
