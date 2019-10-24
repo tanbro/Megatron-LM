@@ -58,7 +58,7 @@ def add_model_config_args(parser):
                        'models larger than BERT-Large.')
     group.add_argument('--make-vocab-size-divisible-by', type=int, default=128,
                        help='Pad the vocab size to be divisible by this value.'
-                       'This is added for computational efficieny reasons.')
+                       'This is added for computational efficiency reasons.')
 
     return parser
 
@@ -118,11 +118,11 @@ def add_training_args(parser):
                        help='Write TensorBoard logs to this directory')
     group.add_argument('--seed', type=int, default=1234,
                        help='random seed')
-    # Batch prodecuer arguments
+    # Batch producer arguments
     group.add_argument('--reset-position-ids', action='store_true',
-                       help='Reset posistion ids after end-of-document token.')
+                       help='Reset position ids after end-of-document token.')
     group.add_argument('--reset-attention-mask', action='store_true',
-                       help='Reset self attention maske after '
+                       help='Reset self attention mask after '
                        'end-of-document token.')
     group.add_argument('--eod-mask-loss', action='store_true',
                        help='Mask loss for the end of document tokens')
@@ -137,7 +137,7 @@ def add_training_args(parser):
     group.add_argument('--lr', type=float, default=1.0e-4,
                        help='initial learning rate')
     group.add_argument('--min-lr', type=float, default=0.0,
-                       help='Minumum value for learning rate. The scheduler'
+                       help='Minimum value for learning rate. The scheduler'
                        'clip values below this threshold.')
     group.add_argument('--warmup', type=float, default=0.01,
                        help='percentage of data to warmup on (.01 = 1% of all '
@@ -388,7 +388,7 @@ def get_args():
             print(' > using dynamic loss scaling')
 
     # The args fp32_* or fp16_* meant to be active when the
-    # args fp16 is set. So the default behaviour should all
+    # args fp16 is set. So the default behavior should all
     # be false.
     if not args.fp16:
         args.fp32_embedding = False
