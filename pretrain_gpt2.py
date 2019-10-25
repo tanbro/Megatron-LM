@@ -15,50 +15,45 @@
 
 """Pretrain GPT2"""
 
-from datetime import datetime
+import math
 import os
 import random
-import math
+from datetime import datetime
+
 import numpy as np
 import torch
+from apex.optimizers import FusedAdam as Adam
 
+import mpu
 from arguments import get_args
 from configure_data import configure_data
-from fp16 import FP16_Module
-from fp16 import FP16_Optimizer
-from learning_rates import AnnealingLR
-from model import GPT2Model
-from model import gpt2_get_params_for_weight_decay_optimization
-from model import DistributedDataParallel as LocalDDP
-import mpu
-from apex.optimizers import FusedAdam as Adam
-from utils import Timers
-from utils import save_checkpoint
-from utils import load_checkpoint
-from utils import report_memory
-from utils import print_args
-from utils import print_params_min_max_norm
-from utils import print_rank_0
-from utils import enable_adlr_autoresume
-from utils import check_adlr_autoresume_termination
-
+from fp16 import FP16_Module, FP16_Optimizer
 from gpt2_data_loader import make_gpt2_dataloaders
+from learning_rates import AnnealingLR
+from model import DistributedDataParallel as LocalDDP
+from model import GPT2Model, gpt2_get_params_for_weight_decay_optimization
+from utils import (Timers, check_adlr_autoresume_termination,
+                   enable_adlr_autoresume, load_checkpoint, print_args,
+                   print_params_min_max_norm, print_rank_0, report_memory,
+                   save_checkpoint)
+
 
 def get_model(args):
     """Build the model."""
-
     print_rank_0('building GPT2 model ...')
-    model = GPT2Model(num_layers=args.num_layers,
-                      vocab_size=args.vocab_size,
-                      hidden_size=args.hidden_size,
-                      num_attention_heads=args.num_attention_heads,
-                      embedding_dropout_prob=args.hidden_dropout,
-                      attention_dropout_prob=args.attention_dropout,
-                      output_dropout_prob=args.hidden_dropout,
-                      max_sequence_length=args.max_position_embeddings,
-                      checkpoint_activations=args.checkpoint_activations,
-                      checkpoint_num_layers=args.checkpoint_num_layers,
-                      parallel_output=True)
+    model = GPT2Model(
+        num_layers=args.num_layers,
+        vocab_size=args.vocab_size,
+        hidden_size=args.hidden_size,
+        num_attention_heads=args.num_attention_heads,
+        embedding_dropout_prob=args.hidden_dropout,
+        attention_dropout_prob=args.attention_dropout,
+        output_dropout_prob=args.hidden_dropout,
+        max_sequence_length=args.max_position_embeddings,
+        checkpoint_activations=args.checkpoint_activations,
+        checkpoint_num_layers=args.checkpoint_num_layers,
+        parallel_output=True
+    )
 
     if mpu.get_data_parallel_rank() == 0:
         print(' > number of parameters on model parallel rank {}: {}'.format(
@@ -104,18 +99,20 @@ def get_optimizer(model, args):
                 param.model_parallel = False
 
     # Use Adam.
-    optimizer = Adam(param_groups,
-                     lr=args.lr, weight_decay=args.weight_decay)
+    optimizer = Adam(param_groups, lr=args.lr, weight_decay=args.weight_decay)
 
     # Wrap into fp16 optimizer.
     if args.fp16:
-        optimizer = FP16_Optimizer(optimizer,
-                                   static_loss_scale=args.loss_scale,
-                                   dynamic_loss_scale=args.dynamic_loss_scale,
-                                   dynamic_loss_args={
-                                       'scale_window': args.loss_scale_window,
-                                       'min_scale':args.min_scale,
-                                       'delayed_shift': args.hysteresis})
+        optimizer = FP16_Optimizer(
+            optimizer,
+            static_loss_scale=args.loss_scale,
+            dynamic_loss_scale=args.dynamic_loss_scale,
+            dynamic_loss_args={
+                'scale_window': args.loss_scale_window,
+                'min_scale': args.min_scale,
+                'delayed_shift': args.hysteresis
+            }
+        )
 
     return optimizer
 
@@ -131,15 +128,17 @@ def get_learning_rate_scheduler(optimizer, args):
     num_iters = max(1, num_iters)
     init_step = -1
     warmup_iter = args.warmup * num_iters
-    lr_scheduler = AnnealingLR(optimizer,
-                               start_lr=args.lr,
-                               warmup_iter=warmup_iter,
-                               num_iters=num_iters,
-                               decay_style=args.lr_decay_style,
-                               last_iter=init_step,
-                               min_lr=args.min_lr,
-                               use_checkpoint_lr_scheduler=args.use_checkpoint_lr_scheduler,
-                               override_lr_scheduler=args.override_lr_scheduler)
+    lr_scheduler = AnnealingLR(
+        optimizer,
+        start_lr=args.lr,
+        warmup_iter=warmup_iter,
+        num_iters=num_iters,
+        decay_style=args.lr_decay_style,
+        last_iter=init_step,
+        min_lr=args.min_lr,
+        use_checkpoint_lr_scheduler=args.use_checkpoint_lr_scheduler,
+        override_lr_scheduler=args.override_lr_scheduler
+    )
 
     return lr_scheduler
 
@@ -159,11 +158,13 @@ def setup_model_and_optimizer(args):
     return model, optimizer, lr_scheduler
 
 
-def get_masks_and_position_ids(data,
-                               eod_token,
-                               reset_position_ids,
-                               reset_attention_mask,
-                               eod_mask_loss=False):
+def get_masks_and_position_ids(
+    data,
+    eod_token,
+    reset_position_ids,
+    reset_attention_mask,
+    eod_mask_loss=False
+):
 
     # Extract batch size and sequence length.
     batch_size, seq_length = data.size()
@@ -173,9 +174,11 @@ def get_masks_and_position_ids(data,
         att_mask_batch = batch_size
     else:
         att_mask_batch = 1
-    attention_mask = torch.tril(torch.ones(
-        (att_mask_batch, seq_length, seq_length), device=data.device)).view(
-            att_mask_batch, 1, seq_length, seq_length)
+    attention_mask = torch.tril(
+        torch.ones(
+            (att_mask_batch, seq_length, seq_length), device=data.device
+        )
+    ).view(att_mask_batch, 1, seq_length, seq_length)
 
     # Loss mask.
     loss_mask = torch.ones(data.size(), dtype=torch.float, device=data.device)
@@ -183,8 +186,9 @@ def get_masks_and_position_ids(data,
         loss_mask[data == eod_token] = 0.0
 
     # Position ids.
-    position_ids = torch.arange(seq_length, dtype=torch.long,
-                                device=data.device)
+    position_ids = torch.arange(
+        seq_length, dtype=torch.long, device=data.device
+    )
     position_ids = position_ids.unsqueeze(0).expand_as(data)
     # We need to clone as the ids will be modifed based on batch index.
     if reset_position_ids:
@@ -194,13 +198,13 @@ def get_masks_and_position_ids(data,
         # Loop through the batches:
         for b in range(batch_size):
 
-            # Find indecies where EOD token is.
+            # Find indices where EOD token is.
             eod_index = position_ids[b, data[b] == eod_token]
-            # Detach indecies from positions if going to modify positions.
+            # Detach indices from positions if going to modify positions.
             if reset_position_ids:
                 eod_index = eod_index.clone()
 
-            # Loop through EOD indecies:
+            # Loop through EOD indices:
             prev_index = 0
             for j in range(eod_index.size()[0]):
                 i = eod_index[j]
@@ -222,7 +226,7 @@ def get_batch(data_iterator, args, timers):
     of 2, we'd get the following two Variables for i = 0:
     ┌ a g m s ┐ ┌ b h n t ┐
     └ b h n t ┘ └ c i o u ┘
-    Note that despite the name of the function, the subdivison of data is not
+    Note that despite the name of the function, the subdivision of data is not
     done along the batch dimension (i.e. dimension 1), since that was handled
     by the data loader. The chunks are along dimension 0, corresponding
     to the seq_len dimension in the LSTM. A Variable representing an appropriate
@@ -252,7 +256,8 @@ def get_batch(data_iterator, args, timers):
         args.eod_token,
         args.reset_position_ids,
         args.reset_attention_mask,
-        args.eod_mask_loss)
+        args.eod_mask_loss
+    )
     # Convert
     if args.fp16:
         attention_mask = attention_mask.half()
@@ -271,8 +276,8 @@ def forward_step(data_iterator, model, args, timers):
 
     # Forward model.
     output = model(tokens, position_ids, attention_mask)
-    losses = mpu.vocab_parallel_cross_entropy(output.contiguous().float(),
-                                              labels)
+    losses = mpu.vocab_parallel_cross_entropy(
+        output.contiguous().float(), labels)
     loss_mask = loss_mask.view(-1)
     loss = torch.sum(losses.view(-1) * loss_mask) / loss_mask.sum()
 
@@ -348,8 +353,7 @@ def train_step(data_iterator, model, optimizer, lr_scheduler,
     return lm_loss_reduced, skipped_iter
 
 
-def train(model, optimizer, lr_scheduler,
-          train_data_iterator, val_data_iterator, timers, args, writer):
+def train(model, optimizer, lr_scheduler, train_data_iterator, val_data_iterator, timers, args, writer):
     """Train the model."""
 
     # Turn on training mode which enables dropout.
@@ -382,7 +386,7 @@ def train(model, optimizer, lr_scheduler,
 
         if args.DDP_impl == 'torch':
             timers_to_log = ['forward', 'backward', 'optimizer',
-                            'batch generator', 'data loader']
+                             'batch generator', 'data loader']
         else:
             timers_to_log = ['forward', 'backward', 'allreduce', 'optimizer',
                              'batch generator', 'data loader']
@@ -393,7 +397,8 @@ def train(model, optimizer, lr_scheduler,
             writer.add_scalar('learning_rate', learning_rate, iteration)
             writer.add_scalar('train_loss', current_lm_loss, iteration)
             if args.fp16:
-                writer.add_scalar('loss_scale', optimizer.loss_scale, iteration)
+                writer.add_scalar(
+                    'loss_scale', optimizer.loss_scale, iteration)
             normalizer = iteration % args.log_interval
             if normalizer == 0:
                 normalizer = args.log_interval
@@ -407,7 +412,7 @@ def train(model, optimizer, lr_scheduler,
                 writer.add_scalar('iteration_time',
                                   elapsed_time / args.log_interval, iteration)
             log_string = ' iteration {:8d}/{:8d} |'.format(iteration,
-                                                            args.train_iters)
+                                                           args.train_iters)
             log_string += ' elapsed time per iteration (ms): {:.1f} |'.format(
                 elapsed_time * 1000.0 / args.log_interval)
             log_string += ' learning rate {:.3E} |'.format(learning_rate)
@@ -461,7 +466,8 @@ def evaluate(data_iterator, model, args, timers, verbose=False):
         while iteration < args.eval_iters:
             iteration += 1
             if verbose and iteration % args.log_interval == 0:
-                print_rank_0('Evaluating iter {}/{}'.format(iteration, args.eval_iters))
+                print_rank_0(
+                    'Evaluating iter {}/{}'.format(iteration, args.eval_iters))
             # Forward evaluation.
             lm_loss = forward_step(data_iterator, model, args, timers)
             # Reduce across processes.
@@ -478,9 +484,7 @@ def evaluate(data_iterator, model, args, timers, verbose=False):
     return total_lm_loss
 
 
-def evaluate_and_print_results(prefix, data_iterator, model,
-                               args, writer, iteration,
-                               timers, verbose=False):
+def evaluate_and_print_results(prefix, data_iterator, model, args, writer, iteration, timers, verbose=False):
     """Helper function to evaluate and dump results on screen."""
     lm_loss = evaluate(data_iterator, model, args, timers, verbose)
     lm_ppl = math.exp(min(20, lm_loss))
@@ -523,7 +527,7 @@ def initialize_distributed(args):
 
 
 def set_random_seed(seed):
-    """Set random seed for reproducability."""
+    """Set random seed for reproducibility."""
 
     if seed is not None and seed > 0:
         random.seed(seed)
@@ -533,7 +537,7 @@ def set_random_seed(seed):
 
 
 def get_train_val_test_data(args):
-    """Load the data on rank zero and boradcast number of tokens to all GPUS."""
+    """Load the data on rank zero and broadcast number of tokens to all GPUs."""
 
     (train_data, val_data, test_data) = (None, None, None)
 
@@ -554,21 +558,29 @@ def get_train_val_test_data(args):
         before = num_tokens
         after = before
         multiple = args.make_vocab_size_divisible_by * \
-                   mpu.get_model_parallel_world_size()
+            mpu.get_model_parallel_world_size()
         while (after % multiple) != 0:
             after += 1
         print_rank_0('> padded vocab (size: {}) with {} dummy '
                      'tokens (new size: {})'.format(
                          before, after - before, after))
         print_rank_0('> found end-of-document token: {}'.format(eod_token))
-        token_counts = torch.cuda.LongTensor([after, eod_token, int(args.do_train), int(args.do_valid), int(args.do_test)])
+        token_counts = torch.cuda.LongTensor([
+            after,
+            eod_token,
+            int(args.do_train),
+            int(args.do_valid),
+            int(args.do_test)
+        ])
     else:
         token_counts = torch.cuda.LongTensor([0, 0, 0, 0, 0])
 
     # Broadcast num tokens.
-    torch.distributed.broadcast(token_counts,
-                                mpu.get_model_parallel_src_rank(),
-                                group=mpu.get_model_parallel_group())
+    torch.distributed.broadcast(
+        token_counts,
+        mpu.get_model_parallel_src_rank(),
+        group=mpu.get_model_parallel_group()
+    )
     num_tokens = token_counts[0].item()
     eod_token = token_counts[1].item()
     args.do_train = token_counts[2].item()
@@ -594,7 +606,7 @@ def main():
     if args.tensorboard_dir and args.rank == 0:
         try:
             from torch.utils.tensorboard import SummaryWriter
-            writer = SummaryWriter(log_dir = args.tensorboard_dir)
+            writer = SummaryWriter(log_dir=args.tensorboard_dir)
         except ModuleNotFoundError:
             print_rank_0('WARNING: TensorBoard writing requested but is not '
                          'available (are you using PyTorch 1.1.0 or later?), '
@@ -612,12 +624,13 @@ def main():
     if args.adlr_autoresume:
         enable_adlr_autoresume(args)
 
-    # Random seeds for reproducability.
+    # Random seeds for reproducibility.
     set_random_seed(args.seed)
 
     # Data stuff.
-    train_data, val_data, test_data, args.vocab_size, \
-        args.eod_token = get_train_val_test_data(args)
+    (
+        train_data, val_data, test_data, args.vocab_size, args.eod_token
+    ) = get_train_val_test_data(args)
 
     # Model, optimizer, and learning rate.
     model, optimizer, lr_scheduler = setup_model_and_optimizer(args)
@@ -626,14 +639,14 @@ def main():
     if args.resume_dataloader:
         if train_data is not None:
             train_data.batch_sampler.start_iter = args.iteration % \
-                                                  len(train_data)
+                len(train_data)
             print_rank_0('setting training data start iteration to {}'.
                          format(train_data.batch_sampler.start_iter))
         if val_data is not None:
             start_iter_val = (args.iteration // args.eval_interval) * \
-                             args.eval_iters
+                args.eval_iters
             val_data.batch_sampler.start_iter = start_iter_val % \
-                                                len(val_data)
+                len(val_data)
             print_rank_0('setting validation data start iteration to {}'.
                          format(val_data.batch_sampler.start_iter))
     if train_data is not None:
@@ -645,25 +658,22 @@ def main():
     else:
         val_data_iterator = None
 
-    #TODO: figure out how to properly set this especially when resuming training
+    # TODO: figure out how to properly set this especially when resuming training
     iteration = 0
     if args.train_iters > 0:
         if args.do_train:
-            iteration, skipped = train(model, optimizer,
-                                       lr_scheduler,
-                                       train_data_iterator,
-                                       val_data_iterator,
-                                       timers, args, writer)
+            iteration, skipped = train(
+                model, optimizer, lr_scheduler, train_data_iterator, val_data_iterator, timers, args, writer
+            )
 
         if args.do_valid:
             prefix = 'the end of training for val data'
-            val_loss = evaluate_and_print_results(prefix, val_data_iterator,
-                                                  model, args, writer, iteration,
-                                                  timers, False)
+            val_loss = evaluate_and_print_results(
+                prefix, val_data_iterator, model, args, writer, iteration, timers, False
+            )
 
     if args.save and iteration != 0:
-        save_checkpoint(iteration, model, optimizer,
-                        lr_scheduler, args)
+        save_checkpoint(iteration, model, optimizer, lr_scheduler, args)
 
     if test_data is not None:
         test_data_iterator = iter(test_data)
@@ -673,8 +683,9 @@ def main():
     if args.do_test:
         # Run on test data.
         prefix = 'the end of training for test data'
-        evaluate_and_print_results(prefix, test_data_iterator,
-                                   model, args, None, 0, timers, True)
+        evaluate_and_print_results(
+            prefix, test_data_iterator, model, args, None, 0, timers, True
+        )
 
 
 if __name__ == "__main__":
