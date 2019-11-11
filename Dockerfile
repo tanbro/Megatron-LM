@@ -1,7 +1,7 @@
 # ===========
 # base images
 # ===========
-FROM nvidia/cuda:10.0-devel
+FROM nvidia/cuda:10.1-devel
 
 
 WORKDIR /root

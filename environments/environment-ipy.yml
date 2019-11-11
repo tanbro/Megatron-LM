@@ -5,7 +5,7 @@ channels:
   - pytorch
   - nvidia
 dependencies:
-  - python>=3.6
+  - python=3.7
   - pip
   - ipython
   - ipywidgets
@@ -19,11 +19,11 @@ dependencies:
   - regex
   - requests
   - tqdm
-  - tensorflow-gpu<2.0,>=1.14
-  - pytorch<1.3,>=1.2
+  - tensorflow-gpu=1.14
+  - pytorch=1.3
   - torchvision
-  - cudatoolkit=10.0
-  - nvidia::nvcc_linux-64=10.0
+  - cudatoolkit=10.1
+  - nvidia::nvcc_linux-64=10.1
   - openexr
   - future
   - pip:
