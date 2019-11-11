@@ -38,7 +38,12 @@ def make_tokenizer(tokenizer_type, corpus, model_path=None, vocab_size=None, mod
     if tokenizer_class is BertWordPieceTokenizer:
         return BertWordPieceTokenizer(model_type, **kwargs)
     elif tokenizer_class is GPT2BPETokenizer:
+        kwargs["tokenizer_model_path"] = model_path
         return GPT2BPETokenizer(**kwargs)
+    elif tokenizer_class is GPT2BPETokenizer_CN:
+        kwargs["tokenizer_model_path"] = model_path
+        return GPT2BPETokenizer_CN(model_path)
+
     text_tokenizer =  tokenizer_class(corpus=corpus, vocab_size=vocab_size, model_path=model_path, model_type=model_type,
                                       pad_token=pad_token, character_coverage=character_coverage)
     return Tokenizer(text_tokenizer, command_tokens, type_tokens)
@@ -797,7 +802,7 @@ class BertWordPieceTokenizer(Tokenizer):
 
 class GPT2BPETokenizer(Tokenizer):
     def __init__(self, cache_dir=None, **kwargs):
-        self.text_tokenizer = GPT2Tokenizer.from_pretrained('gpt2',
+        self.text_tokenizer = GPT2Tokenizer.from_pretrained(kwargs["tokenizer_model_path"],#'gpt2',
                                                             cache_dir=cache_dir)
 
         #disable max len warnings by increasing max len
@@ -886,3 +891,113 @@ class GPT2BPETokenizer(Tokenizer):
         if isinstance(Tokens, Tokenization):
             Tokens = Tokens.tokenization
         return self.text_tokenizer.decode([self.TokenToId(tok) for tok in Tokens])
+
+class GPT2BPETokenizer_CN(Tokenizer):
+    def __init__(self,model_path):
+        self.spm_model = model_path
+        self.load_spm_model()
+        self.num_tokens = self.num_text_tokens
+        self.num_command_tokens = 2
+        self.num_type_tokens = 2
+
+        """
+            <pad>   0
+            <unk>   0
+            <bos>   0
+            <eos>   0
+            <sep>   0
+            <cls>   0
+            <|endoftext|>   0
+        """
+
+        self._command_tokens = [
+            CommandToken('pad', '<pad>', self.text_tokenizer.PieceToId('<pad>')),
+            CommandToken('eos', '<eos>', self.text_tokenizer.PieceToId('<eos>'))
+        ]
+
+        self.command_name_map = {tok.name: tok for tok in self._command_tokens}
+        self.command_token_map = {tok.token: tok for tok in self._command_tokens}
+        self.command_id_map = {tok.Id: tok for tok in self._command_tokens}
+
+        self.type_tokens = [
+            TypeToken('str0', '<str0>', 0),
+            TypeToken('str1', '<str1>', 1),
+        ]
+        self.type_name_map = {tok.name: tok for tok in self.type_tokens}
+        self.type_token_map = {tok.token: tok for tok in self.type_tokens}
+        self.type_id_map = {tok.Id: tok for tok in self.type_tokens}
+
+        self._text_tokens = list(self._tokens)
+        self._text_token_vocab = dict(self._vocab)
+
+        self._command_token_tokens = list(self.command_token_map.keys())
+        self._command_token_vocab = {t:Id for Id,t in self.command_id_map.items()}
+
+        self._token_types = list(self.type_token_map.keys())
+        self._token_type_vocab = {t:Id for Id, t in self.type_id_map.items()}
+
+    def load_spm_model(self):
+
+        self._tokens = []
+        self._vocab = {}
+
+        """load sentencepiece model and parse vocab"""
+        if not os.path.exists(self.spm_model) and not self.spm_model.endswith('.model'):
+            self.spm_model = self.spm_model+'.model'
+        self.text_tokenizer = spm.SentencePieceProcessor()
+        self.text_tokenizer.Load(self.spm_model)
+        self.vocab_size = self.num_text_tokens = len(self.text_tokenizer)
+        self._tokens = [self.IdToToken(t) for t in range(self.vocab_size)]
+        self._vocab = {t: i for i,t in enumerate(self._tokens)}
+
+
+    def EncodeAsIds(self, text, process_fn=None):
+        processed_text = text
+        if process_fn is not None:
+            processed_text = process_fn(processed_text)
+        Ids = self.text_tokenizer.EncodeAsIds(processed_text)
+
+        tokenization = Tokenization(Ids, processed_text, text)
+        tokenization.set_command_tokens(self._command_tokens)
+        return tokenization
+
+
+    def EncodeAsTokens(self, text, process_fn=None):
+        processed_text = text
+        if process_fn is not None:
+            processed_text = process_fn(processed_text)
+
+        tokens = self.sp.EncodeAsTokens(processed_text)
+        tokenization=Tokenization(tokens, processed_text, text, asIds=False)
+
+        tokenization.set_command_tokens(self._command_tokens)
+        return tokenization
+
+
+    def IdToToken(self, Id, type_token=False):
+        if isinstance(Id, (TypeToken, CommandToken)):
+            return Id.token
+        if type_token:
+            return self.type_id_map[Id].token
+        return self.text_tokenizer.IdToPiece(Id)
+
+    def TokenToId(self, token, type_token=False):
+        if isinstance(token, (TypeToken, CommandToken)):
+            return token.Id
+        if type_token:
+            return self.type_token_map[token].Id
+        return self.text_tokenizer.PieceToId(token)
+
+    def DecodeIds(self, Ids, type_token=False):
+        if type_token:
+            return ' '.join(Id.token if isinstance(Id, TypeToken) else self.type_id_map[Id].token for Id in Ids)
+        if isinstance(Ids, Tokenization):
+            Ids = Ids.tokenization
+        return self.text_tokenizer.DecodeIds(Ids)
+
+    def DecodeTokens(self, Tokens, type_token=False):
+        if type_token:
+            return ' '.join(t.token if isinstance(t, TypeToken) else t for t in Tokens)
+        if isinstance(Tokens, Tokenization):
+            Tokens = Tokens.tokenization
+        return self.text_tokenizer.DecodeTokens(Tokens)
