@@ -26,5 +26,6 @@ dependencies:
   - nvidia::nvcc_linux-64=10.1
   - openexr
   - future
+  - more-itertools
   - pip:
     - sentencepiece
