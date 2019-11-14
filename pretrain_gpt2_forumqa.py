@@ -12,6 +12,8 @@ from apex.optimizers import FusedAdam as Adam
 import mpu
 from arguments import get_args
 from configure_data import configure_data
+from data_utils import make_tokenizer
+from forumqa import ForumQaDataset
 from fp16 import FP16_Module, FP16_Optimizer
 from gpt2_data_loader import make_gpt2_dataloaders
 from learning_rates import AnnealingLR
@@ -534,12 +536,33 @@ def get_train_val_test_data(args):
         else:
             data_config = configure_data()
             data_config.set_defaults(data_set_type='GPT2', transpose=False)
-            (train_data, val_data, test_data), tokenizer = data_config.apply(
-                args)
+            # 用我们自己的数据集，这个先不用
+            # (train_data, val_data, test_data), tokenizer = data_config.apply(args)
+            tokenizer_args = {
+                'tokenizer_type': args.tokenizer_type,
+                'corpus': None,
+                'model_path': args.tokenizer_path,
+                'vocab_size': args.vocab_size,
+                'model_type': args.tokenizer_model_type,
+                'cache_dir': args.cache_dir
+            }
+            tokenizer = make_tokenizer(**tokenizer_args)
             num_tokens = tokenizer.num_tokens
             eod_token = tokenizer.get_command('eos').Id
             # commented by: liuxy - 为什么要相等？反正在我们的模型里面不相等
             # assert eod_token == tokenizer.get_command('pad').Id
+            # 我们的数据集
+            data_config.apply_defaults(args)
+            if args.do_train:
+                train_data = ForumQaDataset(
+                    args.train_data, tokenizer, args.seq_length)
+            if args.do_valid:
+                val_data = ForumQaDataset(
+                    args.val_data, tokenizer, args.seq_length)
+            if args.do_test:
+                test_data = ForumQaDataset(
+                    args.test_data, tokenizer, args.seq_length)
+            ##
         before = num_tokens
         after = before
         multiple = args.make_vocab_size_divisible_by * \
