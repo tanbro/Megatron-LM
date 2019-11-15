@@ -531,38 +531,24 @@ def get_train_val_test_data(args):
     # Data loader only on rank 0 of each model parallel group.
     if mpu.get_model_parallel_rank() == 0:
         if args.use_npy_data_loader:
+            # ForumQA 不支持
             (train_data, val_data, test_data), num_tokens, \
                 eod_token = make_gpt2_dataloaders(args)
         else:
             data_config = configure_data()
             data_config.set_defaults(data_set_type='GPT2', transpose=False)
-            # 用我们自己的数据集，这个先不用
-            # (train_data, val_data, test_data), tokenizer = data_config.apply(args)
-            tokenizer_args = {
-                'tokenizer_type': args.tokenizer_type,
-                'corpus': None,
-                'model_path': args.tokenizer_path,
-                'vocab_size': args.vocab_size,
-                'model_type': args.tokenizer_model_type,
-                'cache_dir': args.cache_dir
-            }
-            tokenizer = make_tokenizer(**tokenizer_args)
+            # 强行属性！
+            args.loose_json = True
+            args.text_key = 'text'
+            args.forum_qa = True # 强行增加，按照这个参数，让 data_utils.make_dataset 使用 ForumQA 数据集
+            args.split = [1, 0, 0] # ForumQA 数据集是 Infinit 的，无法现场划分
+            args.lazy_loader = False # ForumQA 数据集是 Infinit 的，无法懒加载
+            #
+            (train_data, val_data, test_data), tokenizer = data_config.apply(args)
             num_tokens = tokenizer.num_tokens
             eod_token = tokenizer.get_command('eos').Id
             # commented by: liuxy - 为什么要相等？反正在我们的模型里面不相等
             # assert eod_token == tokenizer.get_command('pad').Id
-            # 我们的数据集
-            data_config.apply_defaults(args)
-            if args.do_train:
-                train_data = ForumQaDataset(
-                    args.train_data, tokenizer, args.seq_length)
-            if args.do_valid:
-                val_data = ForumQaDataset(
-                    args.val_data, tokenizer, args.seq_length)
-            if args.do_test:
-                test_data = ForumQaDataset(
-                    args.test_data, tokenizer, args.seq_length)
-            ##
         before = num_tokens
         after = before
         multiple = args.make_vocab_size_divisible_by * \

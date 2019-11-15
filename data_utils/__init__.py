@@ -64,7 +64,7 @@ def make_dataset(path, seq_length, text_key, label_key, lazy=False, process_fn=N
                 delim=',', loose=False, binarize_sent=False, drop_unlabeled=False, tokenizer=None,
                 tokenizer_type='CharacterLevelTokenizer', tokenizer_model_path=None, vocab_size=None,
                 model_type='bpe', pad_token=0, character_converage=1.0, non_binary_cols=None,
-                 parallel_group=None, **kwargs):
+                parallel_group=None, **kwargs):
     """function to create datasets+tokenizers for common options"""
     if isinstance(process_fn, str):
         process_fn = eval(process_fn)
@@ -94,9 +94,14 @@ def make_dataset(path, seq_length, text_key, label_key, lazy=False, process_fn=N
 
             text = lazy_array_loader(path_, data_type='data', map_fn=process_fn)
         else:
-            # get dataset
-            text = get_dataset(path_, text_key=text_key, label_key=label_key, binarize_sent=binarize_sent,
-                    delim=delim, drop_unlabeled=drop_unlabeled, loose_json=loose, preprocess_fn=process_fn)
+            # 我们自己增加的， ForumQA 数据！
+            if kwargs.get('forum_qa'):
+                from forumqa import ForumQaDataset
+                text = ForumQaDataset(path_, tokenizer, kwargs['seq_length'])
+            else:
+                # get dataset
+                text = get_dataset(path_, text_key=text_key, label_key=label_key, binarize_sent=binarize_sent,
+                        delim=delim, drop_unlabeled=drop_unlabeled, loose_json=loose, preprocess_fn=process_fn)
         return text
     # get one or multiple datasets and concatenate
     if isinstance(path, str):

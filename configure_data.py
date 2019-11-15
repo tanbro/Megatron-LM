@@ -149,7 +149,10 @@ def make_loaders(args):
         'cache_dir': args.cache_dir,
         'max_preds_per_seq': args.max_preds_per_seq,
         'presplit_sentences': args.presplit_sentences,
-        'parallel_group': mpu.get_data_parallel_group()}
+        'parallel_group': mpu.get_data_parallel_group()
+    }
+    # 强行增加我们自己的，关于 Forum QA 数据集的参数
+    data_set_args['forum_qa'] = getattr(args, 'forum_qa', False)
 
     eval_set_args = copy.copy(data_set_args)
     eval_set_args['split'] = [1.]
