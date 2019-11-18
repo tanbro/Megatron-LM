@@ -97,7 +97,7 @@ def make_dataset(path, seq_length, text_key, label_key, lazy=False, process_fn=N
             # 我们自己增加的， ForumQA 数据！
             if kwargs.get('forum_qa'):
                 from forumqa import ForumQaDataset
-                text = ForumQaDataset(path_, tokenizer, kwargs['seq_length'])
+                text = ForumQaDataset(path_, tokenizer, seq_length)
             else:
                 # get dataset
                 text = get_dataset(path_, text_key=text_key, label_key=label_key, binarize_sent=binarize_sent,
@@ -135,5 +135,6 @@ def make_dataset(path, seq_length, text_key, label_key, lazy=False, process_fn=N
             dstype = bert_sentencepair_dataset
             ds = dstype(ds, max_seq_len=seq_length, presplit_sentences=presplit_sentences)
         elif ds_type.lower() == 'gpt2':
-            ds = GPT2Dataset(ds, max_seq_len=seq_length)
+            if not kwargs.get('forum_qa'):  # 我们的 ForumQa 数据集不可以用 GPT2Dataset 处理！
+                ds = GPT2Dataset(ds, max_seq_len=seq_length)
     return ds, tokenizer

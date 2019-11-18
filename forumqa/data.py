@@ -5,8 +5,10 @@ import random
 import re
 from itertools import chain
 
+import numpy as np
+
 from more_itertools import windowed
-from torch.utils.data import IterableDataset
+from torch.utils.data import Dataset, IterableDataset
 
 _REGEX = r'.*?(([\.|\!|\?|。|！|？]\s*)+|.+)'
 _RE_SPLIT_SENTENCES = re.compile(_REGEX)
@@ -18,7 +20,7 @@ def split_sentences(text):
     return [''.join(s) for s in groups]
 
 
-class ForumQaDataset(IterableDataset):
+class ForumQaDataset(Dataset):
     """论坛 QA 数据集
 
     论坛 QA 包括：
@@ -28,7 +30,7 @@ class ForumQaDataset(IterableDataset):
         * 问题类型标签列表
         * 回答列表
 
-    这个数据集是一个 Infinit(Iterable-style) datasets，他将问题与类型、回答反复组合，循环迭代，返回给 Dataloader
+    这个数据集是将问题与类型、回答反复组合，循环迭代，返回给 Dataloader
 
     数据文件是 JSON lines 格式，每一行都是 JSON Object,其格式形如::
 
@@ -51,23 +53,70 @@ class ForumQaDataset(IterableDataset):
 
     """
 
-    def __init__(self, files, tokenizer, max_seq_len=1024, repeat_times=math.inf):
+    def __init__(self, files, tokenizer, max_seq_len=1024, repeat_times=1000):
         self._files = files
         self._tokenizer = tokenizer
-        self._max_seq_len = max_seq_len
-        self._repeat_times = repeat_times
+        self._max_seq_len = int(max_seq_len)
+        if not self._max_seq_len > 0:
+            raise ValueError('`max_seq_len` must be greater than 0')
+        self._repeat_times = int(repeat_times)
+        if not self._repeat_times > 0:
+            raise ValueError('`repeat_times` must be greater than 0')
+        self._files_lines = self._get_files_lines()
+        self._pos = 0
+        self._no_extract = False
+        self._generator = self._create_generator()
 
-    def __iter__(self):
-        if self.tokenizer is None:
-            raise AttributeError('tokenizer was not set')
+    def __del__(self):
+        self.close()
+
+    def __len__(self):
+        return self._files_lines * self._repeat_times
+
+    def __getitem__(self, key):
+        key = int(key)
+        if key < 0:
+            raise IndexError('Key must be greater than or equal 0')
+        if key >= len(self):
+            raise IndexError('Key is too big')
+        if key == self._pos:
+            value = next(self._generator)
+            self._pos += 1
+        else:
+            if key < self.pos:
+                self._generator.close()
+                self._generator = self._create_generator()
+                self._pos = 0
+            self._no_extract = True
+            try:
+                while self.pos < key:
+                    next(self._generator)
+                    self._pos += 1
+            finally:
+                self._no_extract = False
+            value = next(self._generator)
+            self._pos += 1
+        return value
+
+    def _get_files_lines(self):
+        with fileinput.input(self._files) as fp:
+            return sum(1 for _ in fp)
+
+    def _create_generator(self):
         i = 0
         while i < self._repeat_times:
             i += 1
             with fileinput.input(self._files) as fp:
-                for line in fp:
-                    line = line.strip()
-                    if line:
-                        yield self.extract(line)
+                for s in fp:
+                    s = s.strip()
+                    if s:
+                        if self._no_extract:
+                            yield
+                        else:
+                            yield self.extract(s)
+
+    def close(self):
+        self._generator.close()
 
     def pickup_sentences(self, text, bos=False, eos=False):
         text = text.strip()
@@ -96,6 +145,8 @@ class ForumQaDataset(IterableDataset):
         return list(ids)
 
     def extract(self, text):
+        if self.tokenizer is None:
+            raise AttributeError('tokenizer was not set')
         data = json.loads(text)
         input_ids = []
         # 标题, 问题
@@ -108,7 +159,8 @@ class ForumQaDataset(IterableDataset):
         tags = data.get('tags')
         if tags:
             tag = random.choice(tags)
-            input_ids.extend(self.tokenizer.EncodeAsIds(tag.strip()).tokenization)
+            input_ids.extend(self.tokenizer.EncodeAsIds(
+                tag.strip()).tokenization)
             input_ids.append(self.tokenizer.TokenToId('<sep>'))
         # 问题/回答 的分隔符，保证连续两个 `<sep>`
         input_ids.append(self.tokenizer.TokenToId('<sep>'))
@@ -123,19 +175,24 @@ class ForumQaDataset(IterableDataset):
         total_tokens = self._max_seq_len + 1
         num_pad_tokens = total_tokens - len(input_ids)
         if num_pad_tokens > 0:
-            input_ids.extend([self.tokenizer.TokenToId('<pad>')] * num_pad_tokens)
+            input_ids.extend(
+                [self.tokenizer.TokenToId('<pad>')] * num_pad_tokens)
         else:
             input_ids = input_ids[:total_tokens]
 
-        return input_ids
+        return {'text': np.array(input_ids),}
 
     @property
     def tokenizer(self):
         return self._tokenizer
 
-    @tokenizer.settter
+    @tokenizer.setter
     def tokenizer(self, value):
         self._tokenizer = value
 
     def SetTokenizer(self, tokenizer):
         self.tokenizer = tokenizer
+
+    @property
+    def pos(self):
+        return self._pos

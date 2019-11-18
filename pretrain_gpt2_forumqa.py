@@ -539,9 +539,9 @@ def get_train_val_test_data(args):
             data_config.set_defaults(data_set_type='GPT2', transpose=False)
             # 强行属性！
             args.loose_json = True
-            args.text_key = 'text'
+            args.text_key = 'text' # 强行指定！为了适应我们自己的 ForumQA 格式
             args.forum_qa = True # 强行增加，按照这个参数，让 data_utils.make_dataset 使用 ForumQA 数据集
-            args.split = [1, 0, 0] # ForumQA 数据集是 Infinit 的，无法现场划分
+            args.split = '1,0,0' # ForumQA 数据集是 Infinit 的，无法现场划分
             args.lazy_loader = False # ForumQA 数据集是 Infinit 的，无法懒加载
             #
             (train_data, val_data, test_data), tokenizer = data_config.apply(args)
