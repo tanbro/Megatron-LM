@@ -123,10 +123,11 @@ class ForumQaDataset(Dataset):
         if not text:
             return ''
         sentences = split_sentences(text)
-        sentences = [
+        sentences = (
             self.tokenizer.EncodeAsIds(s.strip()).tokenization
             for s in sentences
-        ]
+        )
+        sentences = [ids for ids in sentences if ids]
         if bos:
             sentences[0].insert(0, self.tokenizer.TokenToId('<bos>'))
         if eos:
