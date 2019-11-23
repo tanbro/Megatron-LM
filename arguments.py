@@ -324,7 +324,8 @@ def add_data_args(parser):
                        choices=['CharacterLevelTokenizer',
                                 'SentencePieceTokenizer',
                                 'BertWordPieceTokenizer',
-                                'GPT2BPETokenizer'],
+                                'GPT2BPETokenizer',
+                                'GPT2BPETokenizer_CN'],
                        help='what type of tokenizer to use')
     group.add_argument("--cache-dir", default=None, type=str,
                        help="Where to store pre-trained BERT downloads")
