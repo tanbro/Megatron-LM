@@ -50,20 +50,20 @@ def main():
     args.batch_size = 1
 
     # interact
-    print('Started', file=sys.stderr)  # 作为启动标志
+    print('Started', file=sys.stderr, flush=True)  # 作为启动标志
     try:
         while True:
             contex_text = input('>>> ').strip()
             if not contex_text:
-                print(f'输入不可为空{os.linesep}', file=sys.stderr)
+                print(f'输入不可为空{os.linesep}', file=sys.stderr, flush=True)
                 continue
             contex_ids = tokenizer.EncodeAsIds(contex_text).tokenization
             for id_ in gen(contex_ids, model, tokenizer, args):
                 s = tokenizer.DecodeIds([id_])
                 print(s, end='')
-            print()
-    except (KeyboardInterrupt, EOFError):
-        print(f'KeyboardInterrupt', file=sys.stderr)
+            print(flush=True)
+    except (KeyboardInterrupt, EOFError) as err:
+        print(err, file=sys.stderr)
 
 
 if __name__ == '__main__':
