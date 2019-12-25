@@ -1,11 +1,14 @@
-#!/bin/bash
+#! /bin/bash
 
-CHECKPOINT_PATH=checkpoints/gpt2_345m/
-MPSIZE=1
-NLAYERS=12
-NHIDDEN=768
-NATT=12
+NLAYERS=36
+NHIDDEN=1280
+NATT=20
 MAXSEQLEN=1024
+
+CHECKPOINT_PATH=checkpoints/774m-hmwebmix-32kv32.bak
+MPSIZE=2
+TOKTYPE=GPT2BPETokenizer_CN
+TOKPATH=data/spm/gpt2_huamei_corpus_bpe_32k_v3.2.model
 
 #SAMPLING ARGS
 TEMP=0.9
@@ -20,13 +23,13 @@ python generate_samples.py \
        --load $CHECKPOINT_PATH \
        --num-attention-heads $NATT \
        --max-position-embeddings 1024 \
-       --tokenizer-type GPT2BPETokenizer \
        --fp16 \
-       --cache-dir cache \
        --out-seq-length $MAXSEQLEN \
        --temperature $TEMP \
        --top_k $TOPK \
        --genfile dbg_unconditional.json \
-       --num-samples 10 \
+       --num-samples 1 \
        --top_p $TOPP \
+       --tokenizer-type $TOKTYPE \
+       --tokenizer-path $TOKPATH \
        --recompute
